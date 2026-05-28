@@ -124,9 +124,9 @@ input[type=color]{width:32px;height:28px;border:1px solid #333;border-radius:6px
 .bm-tile.drag-over{outline:2px solid #ffaa00;transform:scale(1.05);}
 .bm-tile.dragging{opacity:0.2;}
 .bm-tile.emode .tile-icon,.bm-tile.emode .tile-label{pointer-events:none;}
-.bm-placeholder{border-radius:14px;border:1px dashed rgba(255,255,255,0.07);background:rgba(255,255,255,0.015);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color .15s,background .15s;color:rgba(255,255,255,0.12);}
-.bm-placeholder:hover{border-color:rgba(255,255,255,0.22);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.35);}
-.bm-placeholder.drag-target{border-color:#ffaa00;background:rgba(255,170,0,0.08);}
+.bm-placeholder{border-radius:14px;border:1px dashed rgba(255,255,255,0.2);background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color .15s,background .15s;color:rgba(255,255,255,0.25);}
+.bm-placeholder:hover{border-color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.09);color:rgba(255,255,255,0.6);}
+.bm-placeholder.drag-target{border-color:#ffaa00;background:rgba(255,170,0,0.12);}
 .tile-icon{border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;}
 .tile-icon img{width:100%;height:100%;object-fit:cover;border-radius:10px;}
 .tile-label{padding:0 3px;width:100%;text-align:center;font-size:13px;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;}
@@ -491,12 +491,12 @@ async function loadAdminData(){
 }
 
 // ── SETTINGS ──
-function setSize(s){
+window.setSize = function(s){
   settings.tileSize = s;
   ['xs','sm','normal','large'].forEach(x => document.getElementById('btn-'+x).className = 'sz-btn'+(x===s?' active':''));
   scheduleSave(); render();
-}
-function stepCols(d){ settings.cols = Math.min(15, Math.max(1, settings.cols+d)); document.getElementById('colsVal').textContent = settings.cols; scheduleSave(); render(); }
+};
+window.stepCols = function(d){ settings.cols = Math.min(15, Math.max(1, settings.cols+d)); document.getElementById('colsVal').textContent = settings.cols; scheduleSave(); render(); };
 function buildFontPicker(){
   document.getElementById('fontScroll').innerHTML = FONTS.map(f =>
     `<button class="font-opt${f===settings.font?' active':''}" style="font-family:'${f}',sans-serif;font-size:15px;" onclick="setFont('${f}',this)">${f}</button>`
@@ -641,7 +641,7 @@ function renderTile(bm, ts, row, col, tileBg){
 }
 
 function renderPlaceholder(ts, row, col){
-  return `<div class="bm-placeholder" style="width:100%;height:100%;" ondragover="event.preventDefault();event.currentTarget.classList.add('drag-target')" ondragleave="event.currentTarget.classList.remove('drag-target')" ondrop="onDropPlaceholder(event,${row},${col})" onclick="openAddModal(${row},${col})"><div style="font-size:16px;opacity:0.3">+</div></div>`;
+  return `<div class="bm-placeholder" style="width:100%;height:100%;" ondragover="event.preventDefault();event.currentTarget.classList.add('drag-target')" ondragleave="event.currentTarget.classList.remove('drag-target')" ondrop="onDropPlaceholder(event,${row},${col})" onclick="openAddModal(${row},${col})"><div style="font-size:22px;opacity:0.5;line-height:1">+</div></div>`;
 }
 
 // ── GROUPS ──
