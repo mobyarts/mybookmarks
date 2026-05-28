@@ -85,20 +85,6 @@ input[type=color]{width:32px;height:28px;border:1px solid #333;border-radius:6px
 .trans-btn{width:32px;height:28px;border:1px solid #333;border-radius:6px;background:repeating-conic-gradient(#333 0% 25%,#111 0% 50%) 0 0/10px 10px;cursor:pointer;flex-shrink:0;position:relative;}
 .trans-btn.active::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;}
 
-/* ADMIN PANEL */
-.admin-panel{display:none;width:100%;max-width:820px;background:rgba(106,58,255,0.07);border:1px solid #6a3aff44;border-radius:14px;padding:14px 16px;margin:0 0 14px;flex-direction:column;gap:10px;}
-.admin-panel.visible{display:flex;}
-.admin-panel h3{font-size:13px;color:#a87fff;font-weight:500;}
-.admin-stats{display:flex;gap:16px;flex-wrap:wrap;}
-.admin-stat{background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:10px;padding:10px 16px;display:flex;flex-direction:column;gap:4px;}
-.admin-stat-val{font-size:22px;font-weight:600;color:#fff;}
-.admin-stat-label{font-size:11px;color:#666;}
-.admin-users{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;}
-.admin-user{display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03);border:1px solid #222;border-radius:8px;padding:8px 12px;font-size:12px;}
-.admin-user-email{color:#ccc;}
-.admin-user-info{color:#555;font-size:11px;}
-.admin-block-btn{background:#3a1010;border:1px solid #661111;border-radius:6px;padding:3px 8px;font-size:11px;color:#f44336;cursor:pointer;}
-
 /* GRID */
 .grid-wrapper{width:100%;display:flex;flex-direction:column;align-items:center;}
 .bm-group{display:flex;flex-direction:column;align-items:center;width:100%;}
@@ -284,14 +270,6 @@ input[type=color]{width:32px;height:28px;border:1px solid #333;border-radius:6px
     </div>
   </div>
 
-  <!-- ADMIN PANEL -->
-  <div class="admin-panel" id="adminPanel">
-    <h3>&#9876; Admin Panel — only visible to you</h3>
-    <div class="admin-stats" id="adminStats"></div>
-    <div style="font-size:11px;color:#666;margin-top:4px;">Registered users</div>
-    <div class="admin-users" id="adminUsers"></div>
-  </div>
-
   <div class="edit-hint" id="editHint"></div>
   <div class="grid-wrapper" id="gridWrapper"></div>
 </div>
@@ -338,7 +316,7 @@ input[type=color]{width:32px;height:28px;border:1px solid #333;border-radius:6px
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js';
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js';
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, collection } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAG3gClan_66h2IFWI4asxmmDoEqXiT_us",
@@ -436,6 +414,9 @@ async function loadFromFirestore(){
       if(data.settings) Object.assign(settings, data.settings);
       if(data.cells){ cells = data.cells || {}; bookmarks = data.bookmarks || []; groups = data.groups || []; }
       else if(data.bookmarks && data.bookmarks.length) migrateOldBookmarks(data.bookmarks);
+    } else {
+      // First time user — save their email immediately so they appear in Firebase console
+      await setDoc(ref, { email: currentUser.email, cells:{}, bookmarks:[], groups:[], settings });
     }
     applyAllSettings(); render();
     setSyncStatus('Synced ✓','ok');
@@ -448,7 +429,7 @@ async function saveToFirestore(){
   setSyncStatus('Saving…','saving');
   try {
     const ref = doc(db, 'users', currentUser.uid);
-    await setDoc(ref, { cells, bookmarks, groups, settings });
+    await setDoc(ref, { email: currentUser.email, cells, bookmarks, groups, settings });
     setSyncStatus('Saved ✓','ok');
     setTimeout(() => setSyncStatus('',''), 2000);
   } catch(e){ setSyncStatus('Save failed','err'); }
@@ -465,28 +446,6 @@ function migrateOldBookmarks(oldBMs){
     cells[row+','+col] = id; col++;
     if(col >= settings.cols){ col = 0; row++; }
   });
-}
-
-// ── ADMIN ──
-async function loadAdminData(){
-  document.getElementById('adminPanel').className = 'admin-panel visible';
-  try {
-    const usersSnap = await getDocs(collection(db, 'users'));
-    let totalBookmarks = 0;
-    const userList = [];
-    usersSnap.forEach(d => {
-      const data = d.data();
-      const bmCount = (data.bookmarks || []).length;
-      totalBookmarks += bmCount;
-      userList.push({ uid: d.id, email: data.settings?.ownerEmail || d.id, bookmarks: bmCount });
-    });
-    document.getElementById('adminStats').innerHTML =
-      `<div class="admin-stat"><div class="admin-stat-val">${usersSnap.size}</div><div class="admin-stat-label">Total users</div></div>
-       <div class="admin-stat"><div class="admin-stat-val">${totalBookmarks}</div><div class="admin-stat-label">Total bookmarks</div></div>`;
-    document.getElementById('adminUsers').innerHTML = userList.map(u =>
-      `<div class="admin-user"><span class="admin-user-email">${escHtml(u.email)}</span><span class="admin-user-info">${u.bookmarks} bookmarks</span></div>`
-    ).join('');
-  } catch(e){ console.log('Admin load error', e); }
 }
 
 // ── SETTINGS ──
@@ -552,13 +511,11 @@ window.toggleEdit = function(){
     titleEl.removeAttribute('readonly'); titleEl.className='editable';
     document.getElementById('editPanel').className='edit-panel visible';
     buildFontPicker();
-    if(isOwner) loadAdminData();
   } else {
     settings.pageTitle = titleEl.value || 'My Bookmarks';
     btn.className='edit-btn-top'; btn.innerHTML='&#9998; Edit';
     hint.textContent=''; titleEl.setAttribute('readonly',''); titleEl.className='';
     document.getElementById('editPanel').className='edit-panel';
-    document.getElementById('adminPanel').className='admin-panel';
     saveToFirestore();
   }
   render();
