@@ -417,7 +417,6 @@ onAuthStateChanged(auth, async user => {
     document.getElementById('authScreen').style.display = 'none';
     document.getElementById('mainPage').style.display = 'flex';
     await loadFromFirestore();
-    if(isOwner) loadAdminData();
   } else {
     currentUser = null;
     isOwner = false;
