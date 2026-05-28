@@ -414,14 +414,13 @@ async function loadFromFirestore(){
       if(data.settings) Object.assign(settings, data.settings);
       if(data.cells){ cells = data.cells || {}; bookmarks = data.bookmarks || []; groups = data.groups || []; }
       else if(data.bookmarks && data.bookmarks.length) migrateOldBookmarks(data.bookmarks);
-    } else {
-      // First time user — save their email immediately so they appear in Firebase console
-      await setDoc(ref, { email: currentUser.email, cells:{}, bookmarks:[], groups:[], settings });
     }
+    // Always write email so it's visible in Firebase console
+    await setDoc(ref, { email: currentUser.email }, { merge: true });
     applyAllSettings(); render();
     setSyncStatus('Synced ✓','ok');
     setTimeout(() => setSyncStatus('',''), 2000);
-  } catch(e){ setSyncStatus('Could not load','err'); }
+  } catch(e){ setSyncStatus('Could not load','err'); console.error('Load error:',e); }
 }
 
 async function saveToFirestore(){
@@ -429,10 +428,10 @@ async function saveToFirestore(){
   setSyncStatus('Saving…','saving');
   try {
     const ref = doc(db, 'users', currentUser.uid);
-    await setDoc(ref, { email: currentUser.email, cells, bookmarks, groups, settings });
+    await setDoc(ref, { email: currentUser.email, cells, bookmarks, groups, settings }, { merge: true });
     setSyncStatus('Saved ✓','ok');
     setTimeout(() => setSyncStatus('',''), 2000);
-  } catch(e){ setSyncStatus('Save failed','err'); }
+  } catch(e){ setSyncStatus('Save failed','err'); console.error('Save error:',e); }
 }
 
 function scheduleSave(){ clearTimeout(saveTimer); saveTimer = setTimeout(saveToFirestore, 800); }
