@@ -23,9 +23,9 @@ body{min-height:100vh;min-width:fit-content;font-family:sans-serif;color:#fff;di
 .auth-err{font-size:12px;color:#f44336;min-height:16px;text-align:center;}
 
 /* TOP BAR */
-.top-bar{width:100%;display:flex;align-items:center;justify-content:center;padding:20px 8px 0;position:relative;min-height:52px;}
+.top-bar{width:100%;display:flex;align-items:center;justify-content:center;padding:12px 8px 0;position:relative;min-height:44px;}
 .top-bar-title{text-align:center;max-width:calc(100% - 280px);}
-.top-bar-controls{position:absolute;right:8px;top:20px;display:flex;align-items:center;gap:8px;}
+.top-bar-controls{position:absolute;right:8px;top:12px;display:flex;align-items:center;gap:8px;}
 
 /* TITLE */
 #pageTitle{font-size:26px;font-weight:500;color:#fff;text-align:center;background:none;border:none;outline:none;cursor:default;width:100%;display:block;padding:4px 10px;border-radius:8px;caret-color:#fff;font-family:'Montserrat',sans-serif;}
@@ -531,7 +531,9 @@ function applyAllSettings(){
   const hg = settings.hgap||28, vg = settings.vgap||28;
   document.getElementById('hgapSlider').value = hg; document.getElementById('hgapVal').textContent = hg+'px';
   document.getElementById('vgapSlider').value = vg; document.getElementById('vgapVal').textContent = vg+'px';
-  const g1=settings.gapTitleToContent||12, g2=settings.gapBetweenGroups||50, g3=settings.gapGroupTitleToRow||30;
+  const g1 = settings.gapTitleToContent != null ? settings.gapTitleToContent : 12;
+  const g2 = settings.gapBetweenGroups != null ? settings.gapBetweenGroups : 50;
+  const g3 = settings.gapGroupTitleToRow != null ? settings.gapGroupTitleToRow : 30;
   document.getElementById('gapTitleToContentSlider').value=g1; document.getElementById('gapTitleToContentVal').textContent=g1+'px';
   document.getElementById('gapBetweenGroupsSlider').value=g2; document.getElementById('gapBetweenGroupsVal').textContent=g2+'px';
   document.getElementById('gapGroupTitleToRowSlider').value=g3; document.getElementById('gapGroupTitleToRowVal').textContent=g3+'px';
@@ -573,9 +575,9 @@ function render(){
   const showGroups = settings.showGroups !== false && groups.length > 0;
   const groupMap = {}; if(showGroups) groups.forEach(g => groupMap[g.afterRow]=g);
   const tileBg = settings.tileBgTransparent ? 'transparent' : (settings.tileBgColor||'#1a1a1a');
-  const TITLE_TO_FIRST = settings.gapTitleToContent||50;
-  const GROUP_GAP = settings.gapBetweenGroups||50;
-  const GROUP_TITLE_GAP = settings.gapGroupTitleToRow||30;
+  const TITLE_TO_FIRST = settings.gapTitleToContent != null ? settings.gapTitleToContent : 12;
+  const GROUP_GAP = settings.gapBetweenGroups != null ? settings.gapBetweenGroups : 50;
+  const GROUP_TITLE_GAP = settings.gapGroupTitleToRow != null ? settings.gapGroupTitleToRow : 30;
 
   let html = `<div class="bm-group" style="width:100%;align-items:center;margin-top:${TITLE_TO_FIRST}px;">`;
   const firstGroup = groupMap[-1];
