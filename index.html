@@ -658,26 +658,44 @@ window.deleteGroup = function(afterRow){
 
 // ── DRAG & DROP ──
 window.onDragStart = function(e, bmId){
-  dragBMId = bmId; e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain', bmId);
-  setTimeout(() => { const el=document.querySelector(`.bm-tile[data-bmid="${bmId}"]`); if(el) el.classList.add('dragging'); }, 10);
+  dragBMId = bmId;
+  e.dataTransfer.effectAllowed='move';
+  e.dataTransfer.setData('text/plain', bmId);
 };
 window.onDragEnd = function(){
   dragBMId = null;
   document.querySelectorAll('.bm-tile.dragging,.bm-tile.drag-over,.bm-placeholder.drag-target').forEach(el => el.classList.remove('dragging','drag-over','drag-target'));
 };
 window.onDropTile = function(e, toRow, toCol){
-  e.preventDefault(); if(!dragBMId) return;
-  const toKey = toRow+','+toCol, toBmId = cells[toKey];
-  let fromKey = null; Object.keys(cells).forEach(k => { if(cells[k]===dragBMId) fromKey=k; });
-  if(!fromKey) return;
-  if(toBmId) cells[fromKey]=toBmId; else delete cells[fromKey];
-  cells[toKey] = dragBMId; dragBMId=null; render(); scheduleSave();
+  e.preventDefault();
+  const bmId = e.dataTransfer.getData('text/plain') || dragBMId;
+  if(!bmId) return;
+  const toKey = toRow+','+toCol;
+  const toBmId = cells[toKey];
+  // find source key
+  let fromKey = null;
+  Object.keys(cells).forEach(k => { if(cells[k]===bmId) fromKey=k; });
+  if(!fromKey || fromKey===toKey){ dragBMId=null; return; }
+  // swap or move
+  if(toBmId){ cells[fromKey] = toBmId; }
+  else { delete cells[fromKey]; }
+  cells[toKey] = bmId;
+  dragBMId = null;
+  render(); scheduleSave();
 };
 window.onDropPlaceholder = function(e, toRow, toCol){
-  e.preventDefault(); if(!dragBMId) return;
-  let fromKey=null; Object.keys(cells).forEach(k => { if(cells[k]===dragBMId) fromKey=k; });
-  if(!fromKey) return;
-  delete cells[fromKey]; cells[toRow+','+toCol]=dragBMId; dragBMId=null; render(); scheduleSave();
+  e.preventDefault();
+  const bmId = e.dataTransfer.getData('text/plain') || dragBMId;
+  if(!bmId) return;
+  const toKey = toRow+','+toCol;
+  // find and clear source key
+  let fromKey = null;
+  Object.keys(cells).forEach(k => { if(cells[k]===bmId) fromKey=k; });
+  if(!fromKey || fromKey===toKey){ dragBMId=null; return; }
+  delete cells[fromKey];
+  cells[toKey] = bmId;
+  dragBMId = null;
+  render(); scheduleSave();
 };
 
 // ── MODALS ──
