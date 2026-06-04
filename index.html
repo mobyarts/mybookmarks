@@ -206,9 +206,11 @@ input[type=color]{width:32px;height:28px;border:1px solid #333;border-radius:6px
       <span class="ep-label">Tile size</span>
       <div class="size-group">
         <button class="sz-btn" id="btn-xs" onclick="setSize('xs')">XS (72px)</button>
-        <button class="sz-btn" id="btn-sm" onclick="setSize('sm')">S (96px)</button>
-        <button class="sz-btn active" id="btn-normal" onclick="setSize('normal')">M (104px)</button>
-        <button class="sz-btn" id="btn-large" onclick="setSize('large')">L (112px)</button>
+        <button class="sz-btn" id="btn-s80" onclick="setSize('s80')">S (80px)</button>
+        <button class="sz-btn" id="btn-s88" onclick="setSize('s88')">M (88px)</button>
+        <button class="sz-btn active" id="btn-sm" onclick="setSize('sm')">L (96px)</button>
+        <button class="sz-btn" id="btn-normal" onclick="setSize('normal')">XL (104px)</button>
+        <button class="sz-btn" id="btn-large" onclick="setSize('large')">XXL (112px)</button>
       </div>
     </div>
     <div class="ep-sep"></div>
@@ -220,7 +222,7 @@ input[type=color]{width:32px;height:28px;border:1px solid #333;border-radius:6px
           <div class="step-val" id="colsVal">8</div>
           <button class="step-btn" onclick="stepCols(1)">&#43;</button>
         </div>
-        <div class="grid-hint">1 – 15 columns</div>
+        <div class="grid-hint">1 – 20 columns</div>
       </div>
       <div class="grid-ctrl">
         <div class="grid-ctrl-label">Horizontal gap</div>
@@ -242,24 +244,29 @@ input[type=color]{width:32px;height:28px;border:1px solid #333;border-radius:6px
       <div class="grid-ctrl">
         <div class="grid-ctrl-label">Title → bookmarks gap</div>
         <div class="slider-row">
-          <input type="range" min="8" max="120" value="50" id="gapTitleToContentSlider" oninput="applyGapTitleToContent()">
-          <span class="slider-val" id="gapTitleToContentVal">50px</span>
+          <input type="range" min="0" max="120" value="12" id="gapTitleToContentSlider" oninput="applyGapTitleToContent()">
+          <span class="slider-val" id="gapTitleToContentVal">12px</span>
         </div>
       </div>
       <div class="grid-ctrl">
         <div class="grid-ctrl-label">Between groups gap</div>
         <div class="slider-row">
-          <input type="range" min="8" max="120" value="50" id="gapBetweenGroupsSlider" oninput="applyGapBetweenGroups()">
+          <input type="range" min="0" max="120" value="50" id="gapBetweenGroupsSlider" oninput="applyGapBetweenGroups()">
           <span class="slider-val" id="gapBetweenGroupsVal">50px</span>
         </div>
       </div>
       <div class="grid-ctrl">
         <div class="grid-ctrl-label">Group title → rows gap</div>
         <div class="slider-row">
-          <input type="range" min="4" max="80" value="30" id="gapGroupTitleToRowSlider" oninput="applyGapGroupTitleToRow()">
+          <input type="range" min="0" max="80" value="30" id="gapGroupTitleToRowSlider" oninput="applyGapGroupTitleToRow()">
           <span class="slider-val" id="gapGroupTitleToRowVal">30px</span>
         </div>
       </div>
+    </div>
+    <div class="ep-sep"></div>
+    <div class="ep-row">
+      <span class="ep-label">Groups</span>
+      <button id="showGroupsBtn" onclick="toggleShowGroups()" style="background:#111;border:1px solid #333;border-radius:8px;padding:6px 16px;font-size:12px;color:#888;cursor:pointer;transition:all .2s;">Show Groups: <span id="showGroupsState">On</span></button>
     </div>
     <div class="ep-sep"></div>
     <div class="io-row">
@@ -330,7 +337,7 @@ const firebaseConfig = {
 const OWNER_EMAIL = 'mohdmubasshir@gmail.com';
 const EMOJIS = ['🌐','📧','🎵','🎬','📰','🛒','💬','📖','🔗','💼','🏠','⭐','🔍','📊','🎮','🧪','💡','🛠️','📂','🎨','🧠','💰','📅','🚀','🏋️','📷','✈️','🍕','☕','🔒','🎯','🖥️','📱','🌍','🎓','🏦','🎧','🛡️','⚙️','🌙'];
 const FONTS = ['Dancing Script','Montserrat','Orbitron'];
-const TILE_SIZES = {xs:72,sm:96,normal:104,large:112};
+const TILE_SIZES = {xs:72,s80:80,s88:88,sm:96,normal:104,large:112};
 const EXTRA_ROWS = 5;
 
 const app = initializeApp(firebaseConfig);
@@ -343,9 +350,10 @@ let isOwner = false;
 let cells = {}, bookmarks = [], groups = [];
 let settings = {
   font:'Montserrat', titleSize:26, titleColor:'#ffffff', tileTextColor:'#cccccc',
-  bgColor:'#000000', pageTitle:'My Bookmarks', cols:8, tileSize:'normal',
+  bgColor:'#000000', pageTitle:'My Bookmarks', cols:8, tileSize:'sm',
   hgap:28, vgap:28, tileBgColor:'#1a1a1a', tileBgTransparent:false,
-  groupTitleColor:'#888888', gapTitleToContent:50, gapBetweenGroups:50, gapGroupTitleToRow:30
+  groupTitleColor:'#888888', gapTitleToContent:12, gapBetweenGroups:50, gapGroupTitleToRow:30,
+  showGroups:true
 };
 let editMode = false, dragBMId = null, pendingCell = null, editBMId = null;
 let selEmoji = '🌐', selImg = '', tabMode = 'emoji', favImg = '';
@@ -450,10 +458,10 @@ function migrateOldBookmarks(oldBMs){
 // ── SETTINGS ──
 window.setSize = function(s){
   settings.tileSize = s;
-  ['xs','sm','normal','large'].forEach(x => document.getElementById('btn-'+x).className = 'sz-btn'+(x===s?' active':''));
+  ['xs','s80','s88','sm','normal','large'].forEach(x => document.getElementById('btn-'+x).className = 'sz-btn'+(x===s?' active':''));
   scheduleSave(); render();
 };
-window.stepCols = function(d){ settings.cols = Math.min(15, Math.max(1, settings.cols+d)); document.getElementById('colsVal').textContent = settings.cols; scheduleSave(); render(); };
+window.stepCols = function(d){ settings.cols = Math.min(20, Math.max(1, settings.cols+d)); document.getElementById('colsVal').textContent = settings.cols; scheduleSave(); render(); };
 function buildFontPicker(){
   document.getElementById('fontScroll').innerHTML = FONTS.map(f =>
     `<button class="font-opt${f===settings.font?' active':''}" style="font-family:'${f}',sans-serif;font-size:15px;" onclick="setFont('${f}',this)">${f}</button>`
@@ -474,6 +482,36 @@ window.applyGapTitleToContent = function(){ settings.gapTitleToContent = parseIn
 window.applyGapBetweenGroups = function(){ settings.gapBetweenGroups = parseInt(document.getElementById('gapBetweenGroupsSlider').value); document.getElementById('gapBetweenGroupsVal').textContent = settings.gapBetweenGroups+'px'; scheduleSave(); render(); };
 window.applyGapGroupTitleToRow = function(){ settings.gapGroupTitleToRow = parseInt(document.getElementById('gapGroupTitleToRowSlider').value); document.getElementById('gapGroupTitleToRowVal').textContent = settings.gapGroupTitleToRow+'px'; scheduleSave(); render(); };
 
+window.toggleShowGroups = function(){
+  if(!groups.length) return; // no groups, do nothing
+  settings.showGroups = !settings.showGroups;
+  updateShowGroupsBtn();
+  scheduleSave(); render();
+};
+
+function updateShowGroupsBtn(){
+  const btn = document.getElementById('showGroupsBtn');
+  const state = document.getElementById('showGroupsState');
+  const hasGroups = groups.length > 0;
+  if(!hasGroups){
+    btn.style.opacity = '0.35';
+    btn.style.cursor = 'not-allowed';
+    state.textContent = 'N/A';
+  } else if(settings.showGroups !== false){
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+    btn.style.borderColor = '#4caf50';
+    btn.style.color = '#4caf50';
+    state.textContent = 'On';
+  } else {
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+    btn.style.borderColor = '#f44336';
+    btn.style.color = '#f44336';
+    state.textContent = 'Off';
+  }
+}
+
 function applyAllSettings(){
   document.getElementById('body').style.background = settings.bgColor;
   document.getElementById('pageTitle').value = settings.pageTitle || 'My Bookmarks';
@@ -489,14 +527,15 @@ function applyAllSettings(){
   document.getElementById('transBtnTile').className = 'trans-btn'+(settings.tileBgTransparent?' active':'');
   document.getElementById('groupTitleColor').value = settings.groupTitleColor||'#888888';
   document.getElementById('colsVal').textContent = settings.cols;
-  ['xs','sm','normal','large'].forEach(x => document.getElementById('btn-'+x).className = 'sz-btn'+(x===settings.tileSize?' active':''));
+  ['xs','s80','s88','sm','normal','large'].forEach(x => document.getElementById('btn-'+x).className = 'sz-btn'+(x===settings.tileSize?' active':''));
   const hg = settings.hgap||28, vg = settings.vgap||28;
   document.getElementById('hgapSlider').value = hg; document.getElementById('hgapVal').textContent = hg+'px';
   document.getElementById('vgapSlider').value = vg; document.getElementById('vgapVal').textContent = vg+'px';
-  const g1=settings.gapTitleToContent||50, g2=settings.gapBetweenGroups||50, g3=settings.gapGroupTitleToRow||30;
+  const g1=settings.gapTitleToContent||12, g2=settings.gapBetweenGroups||50, g3=settings.gapGroupTitleToRow||30;
   document.getElementById('gapTitleToContentSlider').value=g1; document.getElementById('gapTitleToContentVal').textContent=g1+'px';
   document.getElementById('gapBetweenGroupsSlider').value=g2; document.getElementById('gapBetweenGroupsVal').textContent=g2+'px';
   document.getElementById('gapGroupTitleToRowSlider').value=g3; document.getElementById('gapGroupTitleToRowVal').textContent=g3+'px';
+  updateShowGroupsBtn();
 }
 
 window.toggleEdit = function(){
@@ -510,6 +549,7 @@ window.toggleEdit = function(){
     titleEl.removeAttribute('readonly'); titleEl.className='editable';
     document.getElementById('editPanel').className='edit-panel visible';
     buildFontPicker();
+    updateShowGroupsBtn();
   } else {
     settings.pageTitle = titleEl.value || 'My Bookmarks';
     btn.className='edit-btn-top'; btn.innerHTML='&#9998; Edit';
@@ -530,7 +570,8 @@ function render(){
   document.documentElement.style.setProperty('--grid-max-width', maxW+'px');
   const q = (document.getElementById('search').value||'').toLowerCase();
   const bmMap = {}; bookmarks.forEach(b => bmMap[b.id]=b);
-  const groupMap = {}; groups.forEach(g => groupMap[g.afterRow]=g);
+  const showGroups = settings.showGroups !== false && groups.length > 0;
+  const groupMap = {}; if(showGroups) groups.forEach(g => groupMap[g.afterRow]=g);
   const tileBg = settings.tileBgTransparent ? 'transparent' : (settings.tileBgColor||'#1a1a1a');
   const TITLE_TO_FIRST = settings.gapTitleToContent||50;
   const GROUP_GAP = settings.gapBetweenGroups||50;
