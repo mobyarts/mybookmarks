@@ -594,7 +594,7 @@ function render(){
       const key = row+','+col, bmId = cells[key];
       let bm = bmId ? bmMap[bmId] : null;
       if(q && bm && bm.name.toLowerCase().indexOf(q)===-1 && bm.url.toLowerCase().indexOf(q)===-1) bm=null;
-      html += `<div class="bm-cell" style="width:${ts}px;height:${ts}px;">`;
+      html += `<div class="bm-cell" data-key="${key}" style="width:${ts}px;height:${ts}px;">`;
       if(bm) html += renderTile(bm, ts, row, col, tileBg);
       else if(editMode) html += renderPlaceholder(ts, row, col);
       html += '</div>';
@@ -657,45 +657,71 @@ window.deleteGroup = function(afterRow){
 };
 
 // ── DRAG & DROP ──
+let dropHandled = false;
+
 window.onDragStart = function(e, bmId){
+  dropHandled = false;
   dragBMId = bmId;
-  e.dataTransfer.effectAllowed='move';
+  e.dataTransfer.effectAllowed = 'move';
   e.dataTransfer.setData('text/plain', bmId);
+  // fade source tile
+  setTimeout(() => {
+    Object.entries(cells).forEach(([k, id]) => {
+      if(id === bmId){
+        const [r,c] = k.split(',');
+        const cell = document.querySelector(`.bm-cell[data-key="${k}"]`);
+        if(cell) cell.style.opacity = '0.3';
+      }
+    });
+  }, 0);
 };
+
 window.onDragEnd = function(){
+  // restore opacity on all cells
+  document.querySelectorAll('.bm-cell').forEach(el => el.style.opacity = '');
+  document.querySelectorAll('.bm-tile.drag-over,.bm-placeholder.drag-target').forEach(el => {
+    el.classList.remove('drag-over','drag-target');
+  });
   dragBMId = null;
-  document.querySelectorAll('.bm-tile.dragging,.bm-tile.drag-over,.bm-placeholder.drag-target').forEach(el => el.classList.remove('dragging','drag-over','drag-target'));
+  dropHandled = false;
 };
+
 window.onDropTile = function(e, toRow, toCol){
   e.preventDefault();
-  const bmId = e.dataTransfer.getData('text/plain') || dragBMId;
-  if(!bmId) return;
+  e.stopPropagation();
+  if(dropHandled) return;
+  dropHandled = true;
+  const bmId = dragBMId || e.dataTransfer.getData('text/plain');
+  if(!bmId){ dropHandled=false; return; }
   const toKey = toRow+','+toCol;
   const toBmId = cells[toKey];
-  // find source key
   let fromKey = null;
   Object.keys(cells).forEach(k => { if(cells[k]===bmId) fromKey=k; });
-  if(!fromKey || fromKey===toKey){ dragBMId=null; return; }
-  // swap or move
+  if(!fromKey || fromKey===toKey){ dropHandled=false; return; }
   if(toBmId){ cells[fromKey] = toBmId; }
   else { delete cells[fromKey]; }
   cells[toKey] = bmId;
   dragBMId = null;
-  render(); scheduleSave();
+  render();
+  scheduleSave();
 };
+
 window.onDropPlaceholder = function(e, toRow, toCol){
   e.preventDefault();
-  const bmId = e.dataTransfer.getData('text/plain') || dragBMId;
-  if(!bmId) return;
+  e.stopPropagation();
+  if(dropHandled) return;
+  dropHandled = true;
+  const bmId = dragBMId || e.dataTransfer.getData('text/plain');
+  if(!bmId){ dropHandled=false; return; }
   const toKey = toRow+','+toCol;
-  // find and clear source key
   let fromKey = null;
   Object.keys(cells).forEach(k => { if(cells[k]===bmId) fromKey=k; });
-  if(!fromKey || fromKey===toKey){ dragBMId=null; return; }
+  if(!fromKey || fromKey===toKey){ dropHandled=false; return; }
   delete cells[fromKey];
   cells[toKey] = bmId;
   dragBMId = null;
-  render(); scheduleSave();
+  render();
+  scheduleSave();
 };
 
 // ── MODALS ──
@@ -757,7 +783,13 @@ window.saveBMModal = function(){
 };
 window.deleteBM = function(bmId, row, col){
   if(!confirm('Delete this bookmark?')) return;
-  bookmarks=bookmarks.filter(b=>b.id!==bmId); delete cells[row+','+col]; render(); scheduleSave();
+  // Only remove this specific cell position
+  const key = row+','+col;
+  delete cells[key];
+  // Only remove from bookmarks array if no other cell references this id
+  const stillUsed = Object.values(cells).includes(bmId);
+  if(!stillUsed) bookmarks = bookmarks.filter(b => b.id !== bmId);
+  render(); scheduleSave();
 };
 window.openLink = function(enc){
   const url=decodeURIComponent(enc);
