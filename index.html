@@ -23,14 +23,14 @@ body{min-height:100vh;min-width:fit-content;font-family:sans-serif;color:#fff;di
 .auth-err{font-size:12px;color:#f44336;min-height:16px;text-align:center;}
 
 /* TOP BAR */
-.top-bar{width:100%;display:flex;align-items:center;justify-content:center;padding:12px 8px 0;position:relative;min-height:44px;}
+.top-bar{width:100%;display:flex;align-items:center;justify-content:center;padding:6px 8px 0;position:relative;min-height:36px;}
 .top-bar-title{text-align:center;max-width:calc(100% - 280px);}
-.top-bar-controls{position:absolute;right:8px;top:12px;display:flex;align-items:center;gap:8px;}
+.top-bar-controls{position:absolute;right:8px;top:6px;display:flex;align-items:center;gap:8px;}
 
 /* TITLE */
 #pageTitle{font-size:26px;font-weight:500;color:#fff;text-align:center;background:none;border:none;outline:none;cursor:default;width:100%;display:block;padding:4px 10px;border-radius:8px;caret-color:#fff;font-family:'Montserrat',sans-serif;}
 #pageTitle.editable{border:1px solid #444;background:rgba(255,255,255,0.05);cursor:text;}
-.sync-status{font-size:11px;text-align:center;margin-bottom:4px;min-height:14px;color:#555;}
+.sync-status{font-size:11px;text-align:center;min-height:0;color:#555;}
 .sync-status.ok{color:#4caf50;}
 .sync-status.err{color:#f44336;}
 .sync-status.saving{color:#666;}
@@ -785,13 +785,12 @@ window.saveBMModal = function(){
 };
 window.deleteBM = function(bmId, row, col){
   if(!confirm('Delete this bookmark?')) return;
-  // Only remove this specific cell position
   const key = row+','+col;
   delete cells[key];
-  // Only remove from bookmarks array if no other cell references this id
   const stillUsed = Object.values(cells).includes(bmId);
   if(!stillUsed) bookmarks = bookmarks.filter(b => b.id !== bmId);
-  render(); scheduleSave();
+  render();
+  saveToFirestore(); // save immediately, not debounced
 };
 window.openLink = function(enc){
   const url=decodeURIComponent(enc);
