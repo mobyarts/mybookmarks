@@ -23,9 +23,9 @@ body{min-height:100vh;min-width:fit-content;font-family:sans-serif;color:#fff;di
 .auth-err{font-size:12px;color:#f44336;min-height:16px;text-align:center;}
 
 /* TOP BAR */
-.top-bar{width:100%;display:flex;align-items:center;justify-content:center;padding:6px 8px 0;position:relative;min-height:36px;}
+.top-bar{width:100%;display:flex;align-items:center;justify-content:center;padding:4px 8px 0;position:relative;min-height:32px;}
 .top-bar-title{text-align:center;max-width:calc(100% - 280px);}
-.top-bar-controls{position:absolute;right:8px;top:6px;display:flex;align-items:center;gap:8px;}
+.top-bar-controls{position:absolute;right:8px;top:4px;display:flex;align-items:center;gap:8px;}
 
 /* TITLE */
 #pageTitle{font-size:26px;font-weight:500;color:#fff;text-align:center;background:none;border:none;outline:none;cursor:default;width:100%;display:block;padding:4px 10px;border-radius:8px;caret-color:#fff;font-family:'Montserrat',sans-serif;}
@@ -170,7 +170,7 @@ input[type=color]{width:32px;height:28px;border:1px solid #333;border-radius:6px
       <button class="edit-btn-top" id="editToggle" onclick="toggleEdit()">&#9998; Edit</button>
     </div>
   </div>
-  <div class="sync-status" id="syncStatus"></div>
+  <div class="sync-status" id="syncStatus" style="position:fixed;bottom:8px;right:12px;font-size:10px;"></div>
 
   <!-- EDIT PANEL -->
   <div class="edit-panel" id="editPanel">
@@ -688,7 +688,7 @@ window.onDragEnd = function(){
   dropHandled = false;
 };
 
-window.onDropTile = function(e, toRow, toCol){
+window.onDropTile = async function(e, toRow, toCol){
   e.preventDefault();
   e.stopPropagation();
   if(dropHandled) return;
@@ -705,10 +705,10 @@ window.onDropTile = function(e, toRow, toCol){
   cells[toKey] = bmId;
   dragBMId = null;
   render();
-  scheduleSave();
+  await saveToFirestore();
 };
 
-window.onDropPlaceholder = function(e, toRow, toCol){
+window.onDropPlaceholder = async function(e, toRow, toCol){
   e.preventDefault();
   e.stopPropagation();
   if(dropHandled) return;
@@ -723,7 +723,7 @@ window.onDropPlaceholder = function(e, toRow, toCol){
   cells[toKey] = bmId;
   dragBMId = null;
   render();
-  scheduleSave();
+  await saveToFirestore();
 };
 
 // ── MODALS ──
@@ -783,14 +783,14 @@ window.saveBMModal = function(){
   else if(pendingCell){ bmData.id=genId(); bookmarks.push(bmData); cells[pendingCell.row+','+pendingCell.col]=bmData.id; }
   closeModal(); render(); scheduleSave();
 };
-window.deleteBM = function(bmId, row, col){
+window.deleteBM = async function(bmId, row, col){
   if(!confirm('Delete this bookmark?')) return;
   const key = row+','+col;
   delete cells[key];
-  const stillUsed = Object.values(cells).includes(bmId);
+  const stillUsed = Object.values(cells).some(id => id === bmId);
   if(!stillUsed) bookmarks = bookmarks.filter(b => b.id !== bmId);
   render();
-  saveToFirestore(); // save immediately, not debounced
+  await saveToFirestore();
 };
 window.openLink = function(enc){
   const url=decodeURIComponent(enc);
