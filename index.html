@@ -586,8 +586,9 @@ function render(){
 
       if(isDivCol&&settings.showGroups!==false){
         // render as vertical divider centred in column width
-        const delAttr=editMode?`onclick="removeDividerCol(${col})" title="Click to remove divider"`:'';
-        html+=`<div class="bm-divider-col" style="width:${ts}px;height:${ts}px;" ${editMode?`title="Click to remove divider" onclick="removeDividerCol(${col})" style="cursor:pointer;width:${ts}px;height:${ts}px;":''}>`;
+        const delTitle = editMode ? ' title="Click to remove divider"' : '';
+        const delClick = editMode ? ' onclick="removeDividerCol(' + col + ')" style="cursor:pointer;"' : '';
+        html+=`<div class="bm-divider-col" style="width:${ts}px;height:${ts}px;"${delTitle}${delClick}>`;
         html+=`<div class="bm-divider-line" style="width:${dvWidth}px;height:100%;background:${dvColor};border-radius:${dvWidth}px;"></div>`;
         if(editMode) html+=`<div class="bm-divider-del" style="display:flex;">&#10005;</div>`;
         html+=`</div>`;
