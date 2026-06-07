@@ -41,6 +41,7 @@ body{min-height:100vh;min-width:fit-content;font-family:sans-serif;color:#fff;di
 /* EDIT PANEL — sticky at top when visible */
 .edit-panel{display:none;width:100%;background:rgba(10,10,10,0.97);border-bottom:1px solid #333;padding:12px 16px;flex-direction:column;gap:10px;z-index:500;}
 .edit-panel.visible{display:flex;position:sticky;top:0;}
+.edit-panel-inner{width:100%;max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:10px;}
 .ep-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px;}
 .ep-label{font-size:11px;color:#666;min-width:76px;}
 .font-scroll{display:flex;gap:8px;flex-wrap:wrap;}
@@ -180,6 +181,7 @@ input[type=color]{width:30px;height:26px;border:1px solid #333;border-radius:6px
 
   <!-- EDIT PANEL — sticky -->
   <div class="edit-panel" id="editPanel">
+   <div class="edit-panel-inner">
     <div class="ep-row">
       <span class="ep-label">Font</span>
       <div class="font-scroll" id="fontScroll"></div>
@@ -286,6 +288,7 @@ input[type=color]{width:30px;height:26px;border:1px solid #333;border-radius:6px
       <button class="io-btn logout" onclick="doLogout()">&#10005; Sign Out</button>
       <input type="file" id="importFile" accept=".json" style="display:none" onchange="importBM(event)">
     </div>
+   </div>
   </div>
 
   <div class="edit-hint" id="editHint"></div>
@@ -589,84 +592,111 @@ function render(){
   const TITLE_TO_FIRST=settings.gapTitleToContent??0;
   const GROUP_GAP=settings.gapBetweenGroups??50;
   const GROUP_TITLE_GAP=settings.gapGroupTitleToRow??30;
+  const dvColor=settings.vDividerColor||'rgba(255,255,255,0.3)';
+  const dvWidth=settings.vDividerWidth||2;
 
-  // determine which group each row belongs to (for vDividers)
-  // group key = afterRow of the group header (-1 for first group)
-  let currentGroupKey = -1;
-
+  let currentGroupKey=-1;
   let html=`<div class="bm-group" style="width:100%;align-items:center;margin-top:${TITLE_TO_FIRST}px;">`;
   const firstGroup=groupMap[-1];
   if(firstGroup) html+=renderGroupHeader(firstGroup,-1,maxW,GROUP_TITLE_GAP);
 
+  // Collect rows per group so we can render them together with overlay dividers
+  // We'll render all rows of a group in one container div with position:relative
+  // then overlay vertical lines on top
+
+  // Build row segments: array of {groupKey, rows:[rowIndex,...], isCollapsed}
+  let segments=[];
+  let seg=null;
   for(let row=0;row<totalRows;row++){
-    if(editMode&&row>0&&groupMap[row-1]===undefined){
-      html+=`<div class="row-insert-zone visible" style="max-width:${maxW}px;" onclick="insertGroupAfter(${row-1})"><div class="insert-line"></div><div class="insert-btn">+</div></div>`;
-    }
     if(row>0&&groupMap[row-1]!==undefined){
       currentGroupKey=row-1;
-      html+=`</div></div><div class="bm-group" style="width:100%;align-items:center;margin-top:${GROUP_GAP}px;">`;
-      html+=renderGroupHeader(groupMap[row-1],row-1,maxW,GROUP_TITLE_GAP);
-      html+=`<div class="group-content" id="gc-${row-1}">`;
+      if(seg)segments.push(seg);
+      seg={groupKey:currentGroupKey,rows:[],isCollapsed:collapsedGroups.has(currentGroupKey)};
+    }
+    if(!seg)seg={groupKey:-1,rows:[],isCollapsed:collapsedGroups.has(-1)};
+    seg.rows.push(row);
+  }
+  if(seg)segments.push(seg);
+
+  segments.forEach((s,si)=>{
+    if(si>0){
+      const gKey=s.groupKey;
+      html+=`</div><div class="bm-group" style="width:100%;align-items:center;margin-top:${GROUP_GAP}px;">`;
+      if(showGroups&&groupMap[gKey]) html+=renderGroupHeader(groupMap[gKey],gKey,maxW,GROUP_TITLE_GAP);
     }
 
-    // check collapse
-    const isCollapsed=collapsedGroups.has(currentGroupKey);
-    if(isCollapsed&&!editMode) continue;
+    const gvd=showGroups?(vDividers[s.groupKey]||[]):[];
+    const isCollapsed=s.isCollapsed&&!editMode;
 
-    // get vDividers for current group
-    const gvd=(showGroups?(vDividers[currentGroupKey]||[]):[]);
+    if(isCollapsed){
+      // render nothing but keep structure
+      return;
+    }
 
-    html+=`<div class="bm-row" style="gap:0;margin-bottom:${vgap}px;align-items:stretch;">`;
-    for(let col=0;col<cols;col++){
-      // column insert zone (before this col) if edit mode
-      if(editMode&&showGroups&&col>0){
-        html+=`<div class="col-insert-zone visible" style="width:16px;transform:translateX(-8px);" onclick="insertVDivider(${currentGroupKey},${col-1})"><div class="col-insert-line"></div><div class="col-insert-btn">+</div></div>`;
+    // insert zone before first row (between groups) - already handled
+    // We wrap all rows in position:relative container for overlay dividers
+    html+=`<div style="position:relative;display:flex;flex-direction:column;align-items:center;">`;
+
+    s.rows.forEach((row,ri)=>{
+      // row insert zone (between rows)
+      if(editMode&&ri>0&&groupMap[row-1]===undefined){
+        html+=`<div class="row-insert-zone visible" style="max-width:${maxW}px;" onclick="insertGroupAfter(${row-1})"><div class="insert-line"></div><div class="insert-btn">+</div></div>`;
       }
-      // horizontal gap as spacer
-      if(col>0) html+=`<div style="width:${hgap}px;flex-shrink:0;"></div>`;
 
-      const key=row+','+col, bmId=cells[key];
-      let bm=bmId?bmMap[bmId]:null;
-      if(q&&bm&&bm.name.toLowerCase().indexOf(q)===-1&&bm.url.toLowerCase().indexOf(q)===-1)bm=null;
-      html+=`<div class="bm-cell" data-key="${key}" style="width:${ts}px;height:${ts}px;flex-shrink:0;">`;
-      if(bm) html+=renderTile(bm,ts,row,col,tileBg);
-      else if(editMode) html+=renderPlaceholder(ts,row,col);
-      html+=`</div>`;
+      html+=`<div style="display:flex;flex-direction:row;align-items:center;margin-bottom:${vgap}px;">`;
+      for(let col=0;col<cols;col++){
+        if(col>0) html+=`<div style="width:${hgap}px;flex-shrink:0;position:relative;">`;
+        // col insert zone in the gap between col-1 and col
+        if(editMode&&showGroups&&col>0){
+          html+=`<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:10;" onclick="insertVDivider(${s.groupKey},${col-1})" title="Add vertical divider here">`;
+          html+=`<div style="width:100%;height:2px;background:rgba(255,170,0,0);transition:background .15s;" onmouseenter="this.style.background='rgba(255,170,0,0.5)'" onmouseleave="this.style.background='rgba(255,170,0,0)'" ></div>`;
+          html+=`<div style="position:absolute;width:18px;height:18px;background:#1c1500;border:1px solid #664400;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#ffaa00;font-size:11px;opacity:0;transition:opacity .15s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0'">+</div>`;
+          html+=`</div>`;
+        }
+        if(col>0) html+=`</div>`;
 
-      // vertical divider after this col?
-      if(gvd.includes(col)&&settings.showGroups!==false){
-        const dvColor=settings.vDividerColor||'rgba(255,255,255,0.15)';
-        const dvWidth=settings.vDividerWidth||2;
-        html+=`<div style="display:flex;align-items:center;gap:0;flex-shrink:0;">`;
-        html+=`<div style="width:${Math.floor(hgap/2)}px;flex-shrink:0;"></div>`;
-        html+=`<div style="width:${dvWidth}px;background:${dvColor};border-radius:${dvWidth}px;align-self:stretch;"`;
-        if(editMode) html+=` title="Click to remove divider" onclick="removeVDivider(${currentGroupKey},${col})" style="cursor:pointer;width:${dvWidth}px;background:${dvColor};border-radius:${dvWidth}px;align-self:stretch;"`;
-        html+=`></div>`;
-        html+=`<div style="width:${Math.ceil(hgap/2)}px;flex-shrink:0;"></div>`;
+        const key=row+','+col, bmId=cells[key];
+        let bm=bmId?bmMap[bmId]:null;
+        if(q&&bm&&bm.name.toLowerCase().indexOf(q)===-1&&bm.url.toLowerCase().indexOf(q)===-1)bm=null;
+        html+=`<div class="bm-cell" data-key="${key}" style="width:${ts}px;height:${ts}px;flex-shrink:0;">`;
+        if(bm) html+=renderTile(bm,ts,row,col,tileBg);
+        else if(editMode) html+=renderPlaceholder(ts,row,col);
         html+=`</div>`;
       }
-    }
-    html+=`</div>`;
-  }
-  html+=`</div></div>`;
+      html+=`</div>`;// end row
+    });
+
+    // Overlay continuous vertical divider lines on the group container
+    // Calculate pixel X position of each divider
+    gvd.forEach(colAfter=>{
+      // x = sum of tiles and gaps up to colAfter, then +ts + hgap/2
+      const x=(colAfter+1)*ts+colAfter*hgap+hgap/2;
+      const clickAttr=editMode?`onclick="removeVDivider(${s.groupKey},${colAfter})" title="Click to remove divider" style="cursor:pointer;"`:'';
+      html+=`<div ${clickAttr} style="position:absolute;top:0;bottom:0;left:${x-(dvWidth/2)}px;width:${dvWidth}px;background:${dvColor};border-radius:${dvWidth}px;pointer-events:${editMode?'auto':'none'};"></div>`;
+    });
+
+    html+=`</div>`;// end position:relative container
+  });
+
+  html+=`</div>`;
   document.getElementById('gridWrapper').innerHTML=html;
 }
 
 function renderGroupHeader(group,afterRow,maxW,titleGap){
   const isCollapsed=collapsedGroups.has(afterRow);
-  const arrow=isCollapsed?'&#9654;':'&#9660;'; // ▶ or ▼
+  const arrow=isCollapsed?'&#9654;':'&#9660;';
   const isEditable=editMode?' editable':'';
   const delBtn=editMode?`<button class="group-del-btn" style="display:inline-block" onclick="deleteGroup(${afterRow})">&#10005;</button>`:'';
   const color=settings.groupTitleColor||'#888888';
   return `<div class="group-header" style="max-width:${maxW}px;margin-bottom:${titleGap}px;">
     <div class="group-line"></div>
     <div class="group-title-wrap">
-      <button class="group-collapse-btn" onclick="toggleGroupCollapse(${afterRow})" title="${isCollapsed?'Expand':'Collapse'}">${arrow}</button>
+      ${delBtn}
       <input class="group-title${isEditable}" ${editMode?'':'readonly'} value="${escHtml(group.title||'Group')}"
         style="color:${color};width:${Math.max(50,(group.title||'Group').length*9)}px"
         onchange="updateGroupTitle(${afterRow},this.value)"
         oninput="this.style.width=Math.max(50,this.value.length*9)+'px'">
-      ${delBtn}
+      <button class="group-collapse-btn" onclick="toggleGroupCollapse(${afterRow})" title="${isCollapsed?'Expand':'Collapse'}">${arrow}</button>
     </div>
     <div class="group-line"></div>
   </div>`;
