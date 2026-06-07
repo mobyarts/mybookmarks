@@ -503,13 +503,32 @@ window.toggleGroupCollapse=function(afterRow){
 
 // DIVIDER COLUMN
 window.makeColDivider=function(row,col){
-  // mark every cell in this column within this group as divider
-  // find all rows in this group
-  cells[row+','+col]='divider';
-  // also mark same col in all other rows (we'll mark just this cell, render handles group rows)
-  // Actually mark all rows we know about
+  // find which group this row belongs to
+  // groups are defined by afterRow values — a group starts after its afterRow
+  // first group (afterRow=-1) contains rows from 0 up to the next group's start
   const maxR=getMaxRow();
-  for(let r=0;r<=maxR+EXTRA_ROWS;r++){
+  
+  // find row range of this group
+  let groupStart=0;
+  let groupEnd=maxR;
+  
+  // sort groups by afterRow
+  const sortedGroups=groups.slice().sort((a,b)=>a.afterRow-b.afterRow);
+  
+  for(let i=0;i<sortedGroups.length;i++){
+    const g=sortedGroups[i];
+    const nextG=sortedGroups[i+1];
+    const gStart=g.afterRow+1; // rows start after the divider row
+    const gEnd=nextG?nextG.afterRow:maxR;
+    if(row>=gStart&&row<=gEnd){
+      groupStart=gStart;
+      groupEnd=gEnd;
+      break;
+    }
+  }
+  
+  // only mark rows within this group's range
+  for(let r=groupStart;r<=groupEnd;r++){
     const k=r+','+col;
     if(!cells[k]||cells[k]==='divider'){
       cells[k]='divider';
@@ -519,11 +538,12 @@ window.makeColDivider=function(row,col){
 };
 
 window.removeDividerCol=function(col){
-  // remove divider from all rows for this col
-  Object.keys(cells).forEach(k=>{
-    const [r,c]=k.split(',');
-    if(parseInt(c)===col&&cells[k]==='divider')delete cells[k];
-  });
+  const maxR=getMaxRow();
+  // only remove divider from rows up to maxRow — not the extra rows
+  for(let r=0;r<=maxR;r++){
+    const k=r+','+col;
+    if(cells[k]==='divider')delete cells[k];
+  }
   scheduleSave();render();
 };
 
@@ -545,20 +565,6 @@ function render(){
   const GROUP_TITLE_GAP=settings.gapGroupTitleToRow??30;
   const dvColor=settings.vDividerColor||'rgba(255,255,255,0.3)';
   const dvWidth=settings.vDividerWidth||2;
-
-  // detect which cols are full dividers (all occupied rows in that col are 'divider')
-  function isColDivider(col){
-    // check if any row has this col as divider
-    for(let r=0;r<=maxRow;r++){
-      const v=cells[r+','+col];
-      if(v&&v!=='divider')return false;
-    }
-    // at least one row must have it
-    for(let r=0;r<=maxRow;r++){
-      if(cells[r+','+col]==='divider')return true;
-    }
-    return false;
-  }
 
   let currentGroupKey=-1;
   let html=`<div class="bm-group" style="width:100%;align-items:center;margin-top:${TITLE_TO_FIRST}px;">`;
@@ -582,7 +588,7 @@ function render(){
     for(let col=0;col<cols;col++){
       if(col>0) html+=`<div style="width:${hgap}px;flex-shrink:0;"></div>`;
       const key=row+','+col,cellVal=cells[key];
-      const isDivCol=cellVal==='divider'||(showGroups&&isColDivider(col));
+      const isDivCol=(cellVal==='divider')&&(row<=maxRow)&&(showGroups&&settings.showGroups!==false);
 
       if(isDivCol&&settings.showGroups!==false){
         // render as vertical divider centred in column width
