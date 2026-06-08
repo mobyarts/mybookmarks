@@ -185,6 +185,7 @@ input[type=color]{width:30px;height:26px;border:1px solid #333;border-radius:6px
         <div class="trans-btn" id="transBtnTile" title="Transparent" onclick="setTileBgTransparent()"></div>
       </div>
       <div class="color-group"><label>Group</label><input type="color" id="groupTitleColor" value="#888888" oninput="applyGroupTitleColor()"></div>
+      <div class="color-group"><label>Group line</label><input type="color" id="groupLineColor" value="#333333" oninput="applyGroupLineColor()"></div>
       <div class="color-group"><label>Divider</label><input type="color" id="vDividerColor" value="#ffffff" oninput="applyVDividerColor()"></div>
     </div>
     <div class="ep-sep"></div>
@@ -217,6 +218,10 @@ input[type=color]{width:30px;height:26px;border:1px solid #333;border-radius:6px
       <div class="grid-ctrl">
         <div class="grid-ctrl-label">V gap</div>
         <div class="slider-row"><input type="range" min="0" max="50" value="0" id="vgapSlider" oninput="applyVGap()"><span class="slider-val" id="vgapVal">0px</span></div>
+      </div>
+      <div class="grid-ctrl">
+        <div class="grid-ctrl-label">Group line width</div>
+        <div class="slider-row"><input type="range" min="1" max="10" value="1" id="groupLineWidthSlider" oninput="applyGroupLineWidth()"><span class="slider-val" id="groupLineWidthVal">1px</span></div>
       </div>
       <div class="grid-ctrl">
         <div class="grid-ctrl-label">Divider width</div>
@@ -329,6 +334,7 @@ let settings={
   hgap:28,vgap:0,tileBgColor:'#1a1a1a',tileBgTransparent:false,
   groupTitleColor:'#888888',gapTitleToContent:0,gapBetweenGroups:50,gapGroupTitleToRow:30,
   showGroups:true,vDividerColor:'rgba(255,255,255,0.3)',vDividerWidth:2,
+  groupLineColor:'rgba(255,255,255,0.12)',groupLineWidth:1,
   collapsedGroups:[]
 };
 let editMode=false,dragBMId=null,pendingCell=null,editBMId=null;
@@ -431,6 +437,8 @@ window.applyBg=function(){settings.bgColor=document.getElementById('bgColor').va
 window.applyTileBg=function(){settings.tileBgColor=document.getElementById('tileBgColor').value;settings.tileBgTransparent=false;document.getElementById('transBtnTile').className='trans-btn';scheduleSave();render();};
 window.setTileBgTransparent=function(){settings.tileBgTransparent=true;document.getElementById('transBtnTile').className='trans-btn active';scheduleSave();render();};
 window.applyGroupTitleColor=function(){settings.groupTitleColor=document.getElementById('groupTitleColor').value;scheduleSave();render();};
+window.applyGroupLineColor=function(){settings.groupLineColor=document.getElementById('groupLineColor').value;scheduleSave();render();};
+window.applyGroupLineWidth=function(){settings.groupLineWidth=parseInt(document.getElementById('groupLineWidthSlider').value);document.getElementById('groupLineWidthVal').textContent=settings.groupLineWidth+'px';scheduleSave();render();};
 window.applyVDividerColor=function(){settings.vDividerColor=document.getElementById('vDividerColor').value;scheduleSave();render();};
 window.applyVDividerWidth=function(){settings.vDividerWidth=parseInt(document.getElementById('vDividerWidthSlider').value);document.getElementById('vDividerWidthVal').textContent=settings.vDividerWidth+'px';scheduleSave();render();};
 window.applyHGap=function(){settings.hgap=parseInt(document.getElementById('hgapSlider').value);document.getElementById('hgapVal').textContent=settings.hgap+'px';scheduleSave();render();};
@@ -460,6 +468,9 @@ function applyAllSettings(){
   document.getElementById('tileBgColor').value=settings.tileBgColor||'#1a1a1a';
   document.getElementById('transBtnTile').className='trans-btn'+(settings.tileBgTransparent?' active':'');
   document.getElementById('groupTitleColor').value=settings.groupTitleColor||'#888888';
+  document.getElementById('groupLineColor').value=settings.groupLineColor||'#333333';
+  document.getElementById('groupLineWidthSlider').value=settings.groupLineWidth||1;
+  document.getElementById('groupLineWidthVal').textContent=(settings.groupLineWidth||1)+'px';
   document.getElementById('vDividerColor').value=settings.vDividerColor||'#ffffff';
   document.getElementById('vDividerWidthSlider').value=settings.vDividerWidth||2;
   document.getElementById('vDividerWidthVal').textContent=(settings.vDividerWidth||2)+'px';
@@ -501,49 +512,16 @@ window.toggleGroupCollapse=function(afterRow){
   scheduleSave();render();
 };
 
-// DIVIDER COLUMN
+// DIVIDER COLUMN - mark only single cell per click
 window.makeColDivider=function(row,col){
-  // find which group this row belongs to
-  // groups are defined by afterRow values — a group starts after its afterRow
-  // first group (afterRow=-1) contains rows from 0 up to the next group's start
-  const maxR=getMaxRow();
-  
-  // find row range of this group
-  let groupStart=0;
-  let groupEnd=maxR;
-  
-  // sort groups by afterRow
-  const sortedGroups=groups.slice().sort((a,b)=>a.afterRow-b.afterRow);
-  
-  for(let i=0;i<sortedGroups.length;i++){
-    const g=sortedGroups[i];
-    const nextG=sortedGroups[i+1];
-    const gStart=g.afterRow+1; // rows start after the divider row
-    const gEnd=nextG?nextG.afterRow:maxR;
-    if(row>=gStart&&row<=gEnd){
-      groupStart=gStart;
-      groupEnd=gEnd;
-      break;
-    }
-  }
-  
-  // only mark rows within this group's range
-  for(let r=groupStart;r<=groupEnd;r++){
-    const k=r+','+col;
-    if(!cells[k]||cells[k]==='divider'){
-      cells[k]='divider';
-    }
-  }
+  const key=row+','+col;
+  cells[key]='divider';
   scheduleSave();render();
 };
 
-window.removeDividerCol=function(col){
-  const maxR=getMaxRow();
-  // only remove divider from rows up to maxRow — not the extra rows
-  for(let r=0;r<=maxR;r++){
-    const k=r+','+col;
-    if(cells[k]==='divider')delete cells[k];
-  }
+window.removeDividerCell=function(row,col){
+  const key=row+','+col;
+  delete cells[key];
   scheduleSave();render();
 };
 
@@ -588,15 +566,18 @@ function render(){
     for(let col=0;col<cols;col++){
       if(col>0) html+=`<div style="width:${hgap}px;flex-shrink:0;"></div>`;
       const key=row+','+col,cellVal=cells[key];
-      const isDivCol=(cellVal==='divider')&&(row<=maxRow)&&(showGroups&&settings.showGroups!==false);
+      const isDivCol=(cellVal==='divider')&&(row<=maxRow)&&(settings.showGroups!==false);
 
-      if(isDivCol&&settings.showGroups!==false){
-        // render as vertical divider centred in column width
-        const delTitle = editMode ? ' title="Click to remove divider"' : '';
-        const delClick = editMode ? ' onclick="removeDividerCol(' + col + ')" style="cursor:pointer;"' : '';
-        html+=`<div class="bm-divider-col" style="width:${ts}px;height:${ts}px;"${delTitle}${delClick}>`;
-        html+=`<div class="bm-divider-line" style="width:${dvWidth}px;height:100%;background:${dvColor};border-radius:${dvWidth}px;"></div>`;
-        if(editMode) html+=`<div class="bm-divider-del" style="display:flex;">&#10005;</div>`;
+      if(isDivCol){
+        // check adjacent cells above/below to decide border-radius for joining
+        const above=cells[(row-1)+','+col]==='divider';
+        const below=cells[(row+1)+','+col]==='divider';
+        const topR=above?0:dvWidth;
+        const botR=below?0:dvWidth;
+        const delClick=editMode?` onclick="removeDividerCell(${row},${col})" style="cursor:pointer;" title="Click to remove"`:'';
+        html+=`<div class="bm-divider-col" style="width:${ts}px;height:${ts}px;"${delClick}>`;
+        html+=`<div style="width:${dvWidth}px;height:100%;background:${dvColor};border-radius:${topR}px ${topR}px ${botR}px ${botR}px;"></div>`;
+        if(editMode)html+=`<div class="bm-divider-del" style="display:flex;">&#10005;</div>`;
         html+=`</div>`;
       } else {
         let bm=cellVal&&cellVal!=='divider'?bmMap[cellVal]:null;
@@ -606,10 +587,10 @@ function render(){
           html+=renderTile(bm,ts,row,col,tileBg);
           html+=`</div>`;
         } else if(editMode){
-          html+=`<div class="bm-placeholder-wrap" style="width:${ts}px;height:${ts}px;flex-shrink:0;" data-key="${key}">`;
+          html+=`<div class="bm-placeholder-wrap" style="width:${ts}px;height:${ts}px;flex-shrink:0;position:relative;">`;
           html+=renderPlaceholder(ts,row,col);
           if(showGroups){
-            html+=`<button class="bm-to-divider-btn" onclick="event.stopPropagation();makeColDivider(${row},${col})" title="Turn column into divider">&#9474; divider</button>`;
+            html+=`<button class="bm-to-divider-btn" onclick="event.stopPropagation();makeColDivider(${row},${col})" title="Turn into divider">&#9474; divider</button>`;
           }
           html+=`</div>`;
         } else {
@@ -629,18 +610,32 @@ function renderGroupHeader(group,afterRow,maxW,titleGap){
   const isEditable=editMode?' editable':'';
   const delBtn=editMode?`<button class="group-del-btn" style="display:inline-block" onclick="deleteGroup(${afterRow})">&#10005;</button>`:'';
   const color=settings.groupTitleColor||'#888888';
-  const titleLen=Math.max(80,(group.title||'Group').length*10);
+  const lineColor=settings.groupLineColor||'rgba(255,255,255,0.12)';
+  const lineH=settings.groupLineWidth||1;
+  const title=group.title||'';
+  const hasTitle=title.trim().length>0;
+
+  // simple line only — no title, no arrow
+  if(!hasTitle&&!editMode){
+    return `<div class="group-header" style="max-width:${maxW}px;margin-bottom:${titleGap}px;">
+      <div class="group-line" style="height:${lineH}px;background:${lineColor};"></div>
+    </div>`;
+  }
+
+  // in edit mode always show full header so title can be edited
+  const titleLen=Math.max(80,(title||'').length*10);
   return `<div class="group-header" style="max-width:${maxW}px;margin-bottom:${titleGap}px;">
-    <div class="group-line"></div>
+    <div class="group-line" style="height:${lineH}px;background:${lineColor};"></div>
     <div class="group-title-wrap">
       ${delBtn}
-      <input class="group-title${isEditable}" ${editMode?'':'readonly'} value="${escHtml(group.title||'Group')}"
-        style="color:${color};width:${titleLen}px"
+      <input class="group-title${isEditable}" ${editMode?'':'readonly'} value="${escHtml(title)}"
+        placeholder="${editMode?'Group name':''}"
+        style="color:${color};width:${editMode?Math.max(80,titleLen):titleLen}px;${!hasTitle&&!editMode?'display:none;':''}"
         onchange="updateGroupTitle(${afterRow},this.value)"
         oninput="this.style.width=Math.max(80,this.value.length*10)+'px'">
       <button class="group-collapse-btn" onclick="toggleGroupCollapse(${afterRow})">${arrow}</button>
     </div>
-    <div class="group-line"></div>
+    <div class="group-line" style="height:${lineH}px;background:${lineColor};"></div>
   </div>`;
 }
 
@@ -665,7 +660,18 @@ function renderPlaceholder(ts,row,col){
 window.insertGroupAfter=function(afterRow){
   if(groups.some(g=>g.afterRow===afterRow))return;
   if(groups.length===0)groups.push({afterRow:-1,title:'Group 1'});
-  groups.push({afterRow,title:'Group '+(groups.length+1)});
+  // check if any bookmarks exist below this row
+  const maxR=getMaxRow();
+  let hasBookmarksBelow=false;
+  for(let r=afterRow+1;r<=maxR;r++){
+    for(let c=0;c<settings.cols;c++){
+      const v=cells[r+','+c];
+      if(v&&v!=='divider'){hasBookmarksBelow=true;break;}
+    }
+    if(hasBookmarksBelow)break;
+  }
+  // empty title for separator-only groups
+  groups.push({afterRow,title:hasBookmarksBelow?'Group '+(groups.length+1):''});
   scheduleSave();render();
 };
 window.updateGroupTitle=function(afterRow,title){const g=groups.find(g=>g.afterRow===afterRow);if(g)g.title=title;scheduleSave();};
