@@ -173,44 +173,18 @@ input[type=color]{width:30px;height:26px;border:1px solid #333;border-radius:6px
     <div class="ep-row">
       <span class="ep-label">Title size</span>
       <div class="slider-row"><input type="range" min="16" max="56" value="26" id="titleSize" oninput="applyTitleSize()"><span class="slider-val" id="titleSizeVal">26px</span></div>
-    </div>
-    <div class="ep-sep"></div>
-    <div class="color-row">
-      <div class="color-group"><label>Title</label><input type="color" id="titleColor" value="#ffffff" oninput="applyTitleColor()"></div>
-      <div class="color-group"><label>Tile text</label><input type="color" id="tileTextColor" value="#cccccc" oninput="applyTileTextColor()"></div>
-      <div class="color-group"><label>Background</label><input type="color" id="bgColor" value="#000000" oninput="applyBg()"></div>
-      <div class="color-group">
-        <label>Tile bg</label>
-        <input type="color" id="tileBgColor" value="#1a1a1a" oninput="applyTileBg()">
-        <div class="trans-btn" id="transBtnTile" title="Transparent" onclick="setTileBgTransparent()"></div>
-      </div>
-      <div class="color-group"><label>Group</label><input type="color" id="groupTitleColor" value="#888888" oninput="applyGroupTitleColor()"></div>
-      <div class="color-group"><label>Group line</label><input type="color" id="groupLineColor" value="#333333" oninput="applyGroupLineColor()"></div>
-      <div class="color-group"><label>Divider</label><input type="color" id="vDividerColor" value="#ffffff" oninput="applyVDividerColor()"></div>
-    </div>
-    <div class="ep-sep"></div>
-    <div class="ep-row">
-      <span class="ep-label">Tile size</span>
-      <div class="size-group">
-        <button class="sz-btn" id="btn-xs" onclick="setSize('xs')">XS 72</button>
-        <button class="sz-btn" id="btn-s80" onclick="setSize('s80')">S 80</button>
-        <button class="sz-btn" id="btn-s88" onclick="setSize('s88')">M 88</button>
-        <button class="sz-btn active" id="btn-sm" onclick="setSize('sm')">L 96</button>
-        <button class="sz-btn" id="btn-normal" onclick="setSize('normal')">XL 104</button>
-        <button class="sz-btn" id="btn-large" onclick="setSize('large')">XXL 112</button>
-      </div>
-    </div>
-    <div class="ep-sep"></div>
-    <div class="ep-row" style="gap:16px;flex-wrap:wrap;">
-      <div class="grid-ctrl">
-        <div class="grid-ctrl-label">Columns</div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        <span style="font-size:11px;color:#666;">Columns</span>
         <div class="stepper">
           <button class="step-btn" onclick="stepCols(-1)">&#8722;</button>
           <div class="step-val" id="colsVal">8</div>
           <button class="step-btn" onclick="stepCols(1)">&#43;</button>
         </div>
-        <div class="grid-hint">1–20</div>
+        <span style="font-size:10px;color:#555;">1–20</span>
       </div>
+    </div>
+    <div class="ep-sep"></div>
+    <div class="ep-row" style="gap:12px;flex-wrap:wrap;">
       <div class="grid-ctrl">
         <div class="grid-ctrl-label">H gap</div>
         <div class="slider-row"><input type="range" min="0" max="50" value="28" id="hgapSlider" oninput="applyHGap()"><span class="slider-val" id="hgapVal">28px</span></div>
@@ -220,16 +194,16 @@ input[type=color]{width:30px;height:26px;border:1px solid #333;border-radius:6px
         <div class="slider-row"><input type="range" min="0" max="50" value="0" id="vgapSlider" oninput="applyVGap()"><span class="slider-val" id="vgapVal">0px</span></div>
       </div>
       <div class="grid-ctrl">
-        <div class="grid-ctrl-label">Group line width</div>
+        <div class="grid-ctrl-label">H.Divider width</div>
         <div class="slider-row"><input type="range" min="1" max="10" value="1" id="groupLineWidthSlider" oninput="applyGroupLineWidth()"><span class="slider-val" id="groupLineWidthVal">1px</span></div>
       </div>
       <div class="grid-ctrl">
-        <div class="grid-ctrl-label">Divider width</div>
+        <div class="grid-ctrl-label">V.Divider width</div>
         <div class="slider-row"><input type="range" min="1" max="20" value="2" id="vDividerWidthSlider" oninput="applyVDividerWidth()"><span class="slider-val" id="vDividerWidthVal">2px</span></div>
       </div>
     </div>
     <div class="ep-sep"></div>
-    <div class="ep-row" style="gap:16px;flex-wrap:wrap;">
+    <div class="ep-row" style="gap:12px;flex-wrap:wrap;">
       <div class="grid-ctrl">
         <div class="grid-ctrl-label">Title → content</div>
         <div class="slider-row"><input type="range" min="0" max="120" value="0" id="gapTitleToContentSlider" oninput="applyGapTitleToContent()"><span class="slider-val" id="gapTitleToContentVal">0px</span></div>
@@ -244,12 +218,7 @@ input[type=color]{width:30px;height:26px;border:1px solid #333;border-radius:6px
       </div>
     </div>
     <div class="ep-sep"></div>
-    <div class="ep-row">
-      <span class="ep-label">Groups</span>
-      <button id="showGroupsBtn" onclick="toggleShowGroups()" style="background:#111;border:1px solid #333;border-radius:8px;padding:5px 14px;font-size:12px;color:#888;cursor:pointer;">Show Groups: <span id="showGroupsState">On</span></button>
-    </div>
-    <div class="ep-sep"></div>
-    <div class="io-row">
+        <div class="io-row">
       <button class="io-btn export" onclick="exportBM()">&#8595; Export</button>
       <button class="io-btn import" onclick="document.getElementById('importFile').click()">&#8593; Import</button>
       <button class="io-btn logout" onclick="doLogout()">&#10005; Sign Out</button>
@@ -407,7 +376,8 @@ async function saveToFirestore(){
   try{
     settings.collapsedGroups=Array.from(collapsedGroups);
     const ref=doc(db,'users',currentUser.uid);
-    await setDoc(ref,{email:currentUser.email,cells,bookmarks,groups,settings},{merge:true});
+    // Use full replace (no merge) so deleted cells/dividers actually get removed
+    await setDoc(ref,{email:currentUser.email,cells,bookmarks,groups,settings});
     setSyncStatus('Saved ✓','ok');setTimeout(()=>setSyncStatus('',''),2000);
   }catch(e){setSyncStatus('Save failed','err');console.error(e);}
 }
@@ -604,33 +574,61 @@ function render(){
   document.getElementById('gridWrapper').innerHTML=html;
 }
 
+function hasBookmarksBelow(afterRow){
+  const maxR=getMaxRow();
+  const sortedGroups=groups.slice().sort((a,b)=>a.afterRow-b.afterRow);
+  // find the next group's afterRow to know this group's end
+  const idx=sortedGroups.findIndex(g=>g.afterRow===afterRow);
+  const nextG=sortedGroups[idx+1];
+  const rangeEnd=nextG?nextG.afterRow:maxR;
+  const rangeStart=afterRow+1;
+  for(let r=rangeStart;r<=rangeEnd;r++){
+    for(let c=0;c<settings.cols;c++){
+      const v=cells[r+','+c];
+      if(v&&v!=='divider')return true;
+    }
+  }
+  return false;
+}
+
 function renderGroupHeader(group,afterRow,maxW,titleGap){
   const isCollapsed=collapsedGroups.has(afterRow);
   const arrow=isCollapsed?'&#9654;':'&#9660;';
-  const isEditable=editMode?' editable':'';
-  const delBtn=editMode?`<button class="group-del-btn" style="display:inline-block" onclick="deleteGroup(${afterRow})">&#10005;</button>`:'';
   const color=settings.groupTitleColor||'#888888';
   const lineColor=settings.groupLineColor||'rgba(255,255,255,0.12)';
   const lineH=settings.groupLineWidth||1;
-  const title=group.title||'';
-  const hasTitle=title.trim().length>0;
+  const title=(group.title||'').trim();
+  const hasBMBelow=hasBookmarksBelow(afterRow);
+  const isEditable=editMode?' editable':'';
+  const delBtn=editMode?`<button class="group-del-btn" style="display:inline-block" onclick="deleteGroup(${afterRow})">&#10005;</button>`:'';
 
-  // simple line only — no title, no arrow
-  if(!hasTitle&&!editMode){
+  // CASE 1: no bookmarks below and not edit mode — just a line
+  if(!hasBMBelow&&!editMode){
     return `<div class="group-header" style="max-width:${maxW}px;margin-bottom:${titleGap}px;">
+      <div class="group-line" style="height:${lineH}px;background:${lineColor};flex:1;"></div>
+    </div>`;
+  }
+
+  // CASE 2: no title — arrow centred on line (always visible), no text box
+  if(!title&&!editMode){
+    return `<div class="group-header" style="max-width:${maxW}px;margin-bottom:${titleGap}px;">
+      <div class="group-line" style="height:${lineH}px;background:${lineColor};"></div>
+      <button class="group-collapse-btn" onclick="toggleGroupCollapse(${afterRow})" style="color:${color};font-size:11px;padding:0 6px;">${arrow}</button>
       <div class="group-line" style="height:${lineH}px;background:${lineColor};"></div>
     </div>`;
   }
 
-  // in edit mode always show full header so title can be edited
+  // CASE 3: edit mode — always show full header with title input, arrow, delete
+  // CASE 4: has title — show title with subtle bounding box + arrow
   const titleLen=Math.max(80,(title||'').length*10);
+  const titleBoxStyle=!editMode?`background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:2px 8px;`:'';
   return `<div class="group-header" style="max-width:${maxW}px;margin-bottom:${titleGap}px;">
     <div class="group-line" style="height:${lineH}px;background:${lineColor};"></div>
-    <div class="group-title-wrap">
+    <div class="group-title-wrap" style="${titleBoxStyle}">
       ${delBtn}
       <input class="group-title${isEditable}" ${editMode?'':'readonly'} value="${escHtml(title)}"
         placeholder="${editMode?'Group name':''}"
-        style="color:${color};width:${editMode?Math.max(80,titleLen):titleLen}px;${!hasTitle&&!editMode?'display:none;':''}"
+        style="color:${color};width:${Math.max(80,titleLen)}px"
         onchange="updateGroupTitle(${afterRow},this.value)"
         oninput="this.style.width=Math.max(80,this.value.length*10)+'px'">
       <button class="group-collapse-btn" onclick="toggleGroupCollapse(${afterRow})">${arrow}</button>
