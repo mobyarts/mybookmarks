@@ -568,8 +568,12 @@ function render(){
         const below=cells[(row+1)+','+col]==='divider';
         const topR=above?0:dvWidth;
         const botR=below?0:dvWidth;
-        const delClick=editMode?` onclick="removeDividerCell(${row},${col})" style="cursor:pointer;" title="Click to remove"`:'';
-        html+=`<div class="bm-divider-col" style="width:${ts}px;height:${ts}px;"${delClick}>`;
+        // extend height by vgap downward (and upward if above also divider) to bridge row gaps
+        const extraTop=above?vgap:0;
+        const extraBot=below?vgap:0;
+        const delClick=editMode?` onclick="removeDividerCell(${row},${col})" style="cursor:pointer;width:${ts}px;height:${ts+extraTop+extraBot}px;margin-top:-${extraTop}px;" title="Click to remove"`
+          :`style="width:${ts}px;height:${ts+extraTop+extraBot}px;margin-top:-${extraTop}px;"`;
+        html+=`<div class="bm-divider-col" ${delClick}>`;
         html+=`<div style="width:${dvWidth}px;height:100%;background:${dvColor};border-radius:${topR}px ${topR}px ${botR}px ${botR}px;"></div>`;
         if(editMode)html+=`<div class="bm-divider-del" style="display:flex;">&#10005;</div>`;
         html+=`</div>`;
@@ -626,10 +630,11 @@ function renderGroupHeader(group,afterRow,maxW,titleGap){
   const isEditable=editMode?' editable':'';
   const delBtn=editMode?`<button class="group-del-btn" style="display:inline-block" onclick="deleteGroup(${afterRow})">&#10005;</button>`:'';
 
-  // CASE 1: no bookmarks below and not edit mode — just a line
+  // CASE 1: no bookmarks below and not edit mode — just a line (always visible)
   if(!hasBMBelow&&!editMode){
-    return `<div class="group-header" style="max-width:${maxW}px;margin-bottom:${titleGap}px;">
-      <div class="group-line" style="height:${lineH}px;background:${lineColor};flex:1;"></div>
+    const visibleLineColor = lineColor === 'rgba(255,255,255,0.12)' ? 'rgba(255,255,255,0.25)' : lineColor;
+    return `<div class="group-header" style="max-width:${maxW}px;margin-top:8px;margin-bottom:0;">
+      <div style="flex:1;height:${lineH}px;background:${visibleLineColor};"></div>
     </div>`;
   }
 
