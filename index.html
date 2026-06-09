@@ -512,10 +512,11 @@ window.makeColDivider=function(row,col){
   scheduleSave();render();
 };
 
-window.removeDividerCell=function(row,col){
+window.removeDividerCell=async function(row,col){
   const key=row+','+col;
   delete cells[key];
-  scheduleSave();render();
+  render();
+  await saveToFirestore();
 };
 
 // RENDER
@@ -636,7 +637,7 @@ function renderGroupHeader(group,afterRow,maxW,titleGap){
   if(!title&&!editMode){
     return `<div class="group-header" style="max-width:${maxW}px;margin-bottom:${titleGap}px;">
       <div class="group-line" style="height:${lineH}px;background:${lineColor};"></div>
-      <button class="group-collapse-btn" onclick="toggleGroupCollapse(${afterRow})" style="color:${color};font-size:11px;padding:0 6px;">${arrow}</button>
+      <button class="group-collapse-btn" onclick="toggleGroupCollapse(${afterRow})" style="color:rgba(255,255,255,0.6);font-size:11px;padding:0 10px;flex-shrink:0;">${arrow}</button>
       <div class="group-line" style="height:${lineH}px;background:${lineColor};"></div>
     </div>`;
   }
