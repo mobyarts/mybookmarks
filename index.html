@@ -184,6 +184,29 @@ input[type=color]{width:30px;height:26px;border:1px solid #333;border-radius:6px
       </div>
     </div>
     <div class="ep-sep"></div>
+    <div class="ep-row">
+      <div class="color-group"><label style="font-size:11px;color:#666;">Title</label><input type="color" id="titleColor" value="#ffffff" oninput="applyTitleColor()"></div>
+      <div class="color-group"><label style="font-size:11px;color:#666;">Tile text</label><input type="color" id="tileTextColor" value="#cccccc" oninput="applyTileTextColor()"></div>
+      <div class="color-group"><label style="font-size:11px;color:#666;">Background</label><input type="color" id="bgColor" value="#000000" oninput="applyBg()"></div>
+      <div class="color-group"><label style="font-size:11px;color:#666;">Tile bg</label><input type="color" id="tileBgColor" value="#1a1a1a" oninput="applyTileBg()"><div class="trans-btn" id="transBtnTile" title="Transparent" onclick="setTileBgTransparent()"></div></div>
+      <div class="color-group"><label style="font-size:11px;color:#666;">Group</label><input type="color" id="groupTitleColor" value="#888888" oninput="applyGroupTitleColor()"></div>
+      <div class="color-group"><label style="font-size:11px;color:#666;">H.Divider</label><input type="color" id="groupLineColor" value="#333333" oninput="applyGroupLineColor()"></div>
+      <div class="color-group"><label style="font-size:11px;color:#666;">V.Divider</label><input type="color" id="vDividerColor" value="#ffffff" oninput="applyVDividerColor()"></div>
+      <div style="margin-left:auto;"><button id="showGroupsBtn" onclick="toggleShowGroups()" style="background:#111;border:1px solid #333;border-radius:8px;padding:4px 10px;font-size:11px;color:#888;cursor:pointer;white-space:nowrap;">Groups: <span id="showGroupsState">On</span></button></div>
+    </div>
+    <div class="ep-sep"></div>
+    <div class="ep-row">
+      <span class="ep-label">Tile size</span>
+      <div class="size-group">
+        <button class="sz-btn" id="btn-xs" onclick="setSize('xs')">XS 72</button>
+        <button class="sz-btn" id="btn-s80" onclick="setSize('s80')">S 80</button>
+        <button class="sz-btn" id="btn-s88" onclick="setSize('s88')">M 88</button>
+        <button class="sz-btn active" id="btn-sm" onclick="setSize('sm')">L 96</button>
+        <button class="sz-btn" id="btn-normal" onclick="setSize('normal')">XL 104</button>
+        <button class="sz-btn" id="btn-large" onclick="setSize('large')">XXL 112</button>
+      </div>
+    </div>
+    <div class="ep-sep"></div>
     <div class="ep-row" style="gap:12px;flex-wrap:wrap;">
       <div class="grid-ctrl">
         <div class="grid-ctrl-label">H gap</div>
