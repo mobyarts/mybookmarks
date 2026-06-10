@@ -159,12 +159,17 @@ input[type=color]{width:30px;height:26px;border:1px solid #333;border-radius:6px
     </div>
     <div class="top-bar-controls">
       <input class="search-input" type="text" id="search" placeholder="Search..." oninput="render()">
-      <button class="edit-btn-top" id="editToggle" onclick="toggleEdit()">&#9998; Edit</button>
+      <button class="edit-btn-top" id="settingsToggle" onclick="toggleSettings()" title="Settings">&#9881;</button>
+      <button class="edit-btn-top" id="editToggle" onclick="toggleEdit()">&#9998; Edit Bookmarks</button>
     </div>
   </div>
 
   <div class="edit-panel" id="editPanel">
    <div class="ep-inner">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <span style="font-size:11px;color:#555;letter-spacing:1px;text-transform:uppercase;">Settings</span>
+      <button onclick="toggleSettings()" style="background:#222;border:1px solid #555;border-radius:8px;padding:4px 14px;font-size:12px;color:#fff;cursor:pointer;font-weight:500;">&#10003; Done</button>
+    </div>
     <div class="ep-row">
       <span class="ep-label">Font</span>
       <div class="font-scroll" id="fontScroll"></div>
@@ -207,20 +212,20 @@ input[type=color]{width:30px;height:26px;border:1px solid #333;border-radius:6px
       </div>
     </div>
     <div class="ep-sep"></div>
-    <div class="ep-row" style="gap:12px;flex-wrap:wrap;">
-      <div class="grid-ctrl">
+    <div class="ep-row" style="gap:12px;flex-wrap:nowrap;">
+      <div class="grid-ctrl" style="flex:1;min-width:0;">
         <div class="grid-ctrl-label">H gap</div>
         <div class="slider-row"><input type="range" min="0" max="50" value="28" id="hgapSlider" oninput="applyHGap()"><span class="slider-val" id="hgapVal">28px</span></div>
       </div>
-      <div class="grid-ctrl">
+      <div class="grid-ctrl" style="flex:1;min-width:0;">
         <div class="grid-ctrl-label">V gap</div>
         <div class="slider-row"><input type="range" min="0" max="50" value="0" id="vgapSlider" oninput="applyVGap()"><span class="slider-val" id="vgapVal">0px</span></div>
       </div>
-      <div class="grid-ctrl">
+      <div class="grid-ctrl" style="flex:1;min-width:0;">
         <div class="grid-ctrl-label">H.Divider width</div>
         <div class="slider-row"><input type="range" min="1" max="10" value="1" id="groupLineWidthSlider" oninput="applyGroupLineWidth()"><span class="slider-val" id="groupLineWidthVal">1px</span></div>
       </div>
-      <div class="grid-ctrl">
+      <div class="grid-ctrl" style="flex:1;min-width:0;">
         <div class="grid-ctrl-label">V.Divider width</div>
         <div class="slider-row"><input type="range" min="1" max="20" value="2" id="vDividerWidthSlider" oninput="applyVDividerWidth()"><span class="slider-val" id="vDividerWidthVal">2px</span></div>
       </div>
@@ -481,19 +486,51 @@ function applyAllSettings(){
 
 window.toggleEdit=function(){
   editMode=!editMode;
-  const btn=document.getElementById('editToggle'),titleEl=document.getElementById('pageTitle'),hint=document.getElementById('editHint');
+  const btn=document.getElementById('editToggle');
+  const titleEl=document.getElementById('pageTitle');
+  const hint=document.getElementById('editHint');
+  // close settings if open
+  document.getElementById('editPanel').className='edit-panel';
+  document.getElementById('settingsToggle').className='edit-btn-top';
   if(editMode){
-    btn.className='edit-btn-top on';btn.innerHTML='&#10003; Done';
+    btn.className='edit-btn-top on';
+    btn.innerHTML='&#10003; Done';
     hint.textContent='Edit mode — drag to move, click empty cell to add, pencil to edit, trash to delete';
     titleEl.removeAttribute('readonly');titleEl.className='editable';
-    document.getElementById('editPanel').className='edit-panel visible';
-    buildFontPicker();updateShowGroupsBtn();
   } else {
     settings.pageTitle=titleEl.value||'My Bookmarks';
-    btn.className='edit-btn-top';btn.innerHTML='&#9998; Edit';
-    hint.textContent='';titleEl.setAttribute('readonly','');titleEl.className='';
-    document.getElementById('editPanel').className='edit-panel';
+    btn.className='edit-btn-top';
+    btn.innerHTML='&#9998; Edit Bookmarks';
+    hint.textContent='';
+    titleEl.setAttribute('readonly','');titleEl.className='';
     saveToFirestore();
+  }
+  render();
+};
+
+window.toggleSettings=function(){
+  const panel=document.getElementById('editPanel');
+  const btn=document.getElementById('settingsToggle');
+  const isOpen=panel.className.includes('visible');
+  if(isOpen){
+    // close settings
+    panel.className='edit-panel';
+    btn.className='edit-btn-top';
+    saveToFirestore();
+  } else {
+    // open settings — exit edit mode first if active
+    if(editMode){
+      editMode=false;
+      const titleEl=document.getElementById('pageTitle');
+      settings.pageTitle=titleEl.value||'My Bookmarks';
+      document.getElementById('editToggle').className='edit-btn-top';
+      document.getElementById('editToggle').innerHTML='&#9998; Edit Bookmarks';
+      document.getElementById('editHint').textContent='';
+      titleEl.setAttribute('readonly','');titleEl.className='';
+    }
+    panel.className='edit-panel visible';
+    btn.className='edit-btn-top on';
+    buildFontPicker();updateShowGroupsBtn();
   }
   render();
 };
