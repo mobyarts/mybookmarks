@@ -598,6 +598,19 @@ function render(){
     }
     html+=`</div>`;
   }
+  // Render any group headers whose afterRow >= last bookmark row
+  // These never get triggered inside the loop since there's no row after them
+  if(showGroups){
+    groups.forEach(function(g){
+      if(g.afterRow>=maxRow){
+        html+=`</div><div class="bm-group" style="width:100%;align-items:center;margin-top:${GROUP_GAP}px;">`;
+        html+=renderGroupHeader(g,g.afterRow,maxW,GROUP_TITLE_GAP);
+        html+=`</div>`;
+        html+=`<div class="bm-group" style="width:100%;align-items:center;">`;
+      }
+    });
+  }
+
   html+=`</div>`;
   document.getElementById('gridWrapper').innerHTML=html;
 }
