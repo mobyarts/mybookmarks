@@ -159,7 +159,7 @@ input[type=color]{width:30px;height:26px;border:1px solid #333;border-radius:6px
     </div>
     <div class="top-bar-controls">
       <input class="search-input" type="text" id="search" placeholder="Search..." oninput="render()">
-      <button class="edit-btn-top" id="settingsToggle" onclick="toggleSettings()" title="Settings" style="font-size:16px;padding:4px 8px;">&#9881;</button>
+      <button id="settingsToggle" onclick="toggleSettings()" title="Settings" style="background:none;border:none;cursor:pointer;font-size:18px;color:#888;padding:2px 4px;line-height:1;">&#9881;</button>
       <button class="edit-btn-top" id="editToggle" onclick="toggleEdit()">&#9998; Edit Bookmarks</button>
     </div>
   </div>
@@ -513,12 +513,10 @@ window.toggleSettings=function(){
   const btn=document.getElementById('settingsToggle');
   const isOpen=panel.className.includes('visible');
   if(isOpen){
-    // close settings
     panel.className='edit-panel';
-    btn.className='edit-btn-top';
+    btn.style.color='#888';
     saveToFirestore();
   } else {
-    // open settings — exit edit mode first if active
     if(editMode){
       editMode=false;
       const titleEl=document.getElementById('pageTitle');
@@ -529,7 +527,7 @@ window.toggleSettings=function(){
       titleEl.setAttribute('readonly','');titleEl.className='';
     }
     panel.className='edit-panel visible';
-    btn.className='edit-btn-top on';
+    btn.style.color='#ffaa00';
     buildFontPicker();updateShowGroupsBtn();
   }
   render();
