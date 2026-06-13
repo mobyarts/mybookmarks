@@ -158,8 +158,8 @@ input[type=color]{width:30px;height:26px;border:1px solid #333;border-radius:6px
       <input type="text" id="pageTitle" value="My Bookmarks" readonly>
     </div>
     <div class="top-bar-controls">
+      <button id="editToggle" onclick="toggleEdit()" title="Edit Bookmarks" style="background:none;border:none;cursor:pointer;font-size:32px;color:#888;padding:2px 4px;line-height:1;">&#9998;</button>
       <button id="settingsToggle" onclick="toggleSettings()" title="Settings" style="background:none;border:none;cursor:pointer;font-size:32px;color:#888;padding:2px 4px;line-height:1;">&#9881;</button>
-      <button class="edit-btn-top" id="editToggle" onclick="toggleEdit()">&#9998; Edit Bookmarks</button>
     </div>
   </div>
 
@@ -486,20 +486,27 @@ function applyAllSettings(){
 window.toggleEdit=function(){
   editMode=!editMode;
   const btn=document.getElementById('editToggle');
+  const gearBtn=document.getElementById('settingsToggle');
   const titleEl=document.getElementById('pageTitle');
   const hint=document.getElementById('editHint');
   // close settings if open
   document.getElementById('editPanel').className='edit-panel';
-  document.getElementById('settingsToggle').className='edit-btn-top';
   if(editMode){
-    btn.className='edit-btn-top on';
-    btn.innerHTML='&#10003; Done';
+    // pencil becomes "Done" pill button
+    btn.outerHTML='<button id="editToggle" onclick="toggleEdit()" style="background:#1c1500;border:1px solid #664400;border-radius:8px;cursor:pointer;font-size:13px;color:#ffaa00;padding:5px 12px;line-height:1;white-space:nowrap;">&#10003; Done</button>';
+    // gear greyed out / disabled
+    gearBtn.style.color='#444';
+    gearBtn.style.cursor='not-allowed';
+    gearBtn.disabled=true;
     hint.textContent='Edit mode — drag to move, click empty cell to add, pencil to edit, trash to delete';
     titleEl.removeAttribute('readonly');titleEl.className='editable';
   } else {
     settings.pageTitle=titleEl.value||'My Bookmarks';
-    btn.className='edit-btn-top';
-    btn.innerHTML='&#9998; Edit Bookmarks';
+    // restore pencil icon button
+    document.getElementById('editToggle').outerHTML='<button id="editToggle" onclick="toggleEdit()" title="Edit Bookmarks" style="background:none;border:none;cursor:pointer;font-size:32px;color:#888;padding:2px 4px;line-height:1;">&#9998;</button>';
+    gearBtn.style.color='#888';
+    gearBtn.style.cursor='pointer';
+    gearBtn.disabled=false;
     hint.textContent='';
     titleEl.setAttribute('readonly','');titleEl.className='';
     saveToFirestore();
@@ -516,15 +523,7 @@ window.toggleSettings=function(){
     btn.style.color='#888';
     saveToFirestore();
   } else {
-    if(editMode){
-      editMode=false;
-      const titleEl=document.getElementById('pageTitle');
-      settings.pageTitle=titleEl.value||'My Bookmarks';
-      document.getElementById('editToggle').className='edit-btn-top';
-      document.getElementById('editToggle').innerHTML='&#9998; Edit Bookmarks';
-      document.getElementById('editHint').textContent='';
-      titleEl.setAttribute('readonly','');titleEl.className='';
-    }
+    if(editMode)return; // can't open settings while editing (gear is disabled anyway)
     panel.className='edit-panel visible';
     btn.style.color='#ffaa00';
     buildFontPicker();updateShowGroupsBtn();
