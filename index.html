@@ -143,12 +143,29 @@ input[type=color]{width:30px;height:26px;border:1px solid #333;border-radius:6px
 <div class="auth-screen" id="authScreen">
   <div class="auth-box">
     <h2>My Bookmarks</h2>
-    <p>Sign in to access your personal bookmark page</p>
+    <p>Sign in to sync your bookmarks across devices, or continue without an account to save them in this browser only.</p>
     <button class="google-btn" onclick="signInWithGoogle()">
       <img src="https://www.google.com/favicon.ico" alt="G">
       Continue with Google
     </button>
+    <button class="google-btn" onclick="continueWithoutAccount()" style="background:#1a1a1a;color:#ccc;border:1px solid #333;">
+      Continue without account
+    </button>
     <div class="auth-err" id="authErr"></div>
+  </div>
+</div>
+
+<!-- IMPORT CONSENT MODAL -->
+<div class="overlay" id="importConsentOverlay" style="display:none">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">Import existing bookmarks?</div>
+    <div style="font-size:13px;color:#aaa;text-align:center;line-height:1.5;">
+      We found bookmarks saved in this browser. Would you like to copy them into your signed-in account?
+    </div>
+    <div class="modal-actions">
+      <button class="m-cancel" onclick="resolveImportConsent(false)">No, start fresh</button>
+      <button class="m-save" onclick="resolveImportConsent(true)">Yes, import</button>
+    </div>
   </div>
 </div>
 
@@ -245,10 +262,11 @@ input[type=color]{width:30px;height:26px;border:1px solid #333;border-radius:6px
       </div>
     </div>
     <div class="ep-sep"></div>
+    <div class="ep-row" id="accountStatusRow" style="font-size:11px;color:#666;"></div>
         <div class="io-row">
       <button class="io-btn export" onclick="exportBM()">&#8595; Export</button>
       <button class="io-btn import" onclick="document.getElementById('importFile').click()">&#8593; Import</button>
-      <button class="io-btn logout" onclick="doLogout()">&#10005; Sign Out</button>
+      <button class="io-btn" id="accountBtn" style="border-color:#1a2a4a;background:#0d1220;color:#64b5f6;" onclick="handleAccountBtn()">Sign in with Google</button>
       <input type="file" id="importFile" accept=".json" style="display:none" onchange="importBM(event)">
     </div>
    </div>
@@ -321,6 +339,10 @@ const db=getFirestore(app);
 const provider=new GoogleAuthProvider();
 
 let currentUser=null;
+let storageMode='local'; // 'local' or 'firebase'
+const LOCAL_KEY='bm_data_v1';
+const LOCAL_INIT_KEY='bm_initialized';
+let importConsentResolver=null;
 // cells: "row,col" -> bookmarkId OR "divider"
 let cells={}, bookmarks=[], groups=[];
 let collapsedGroups=new Set();
@@ -359,20 +381,136 @@ function deduplicateCells(){
   return toDelete.length>0;
 }
 
+// LOCAL STORAGE
+function saveToLocal(){
+  settings.collapsedGroups=Array.from(collapsedGroups);
+  try{
+    localStorage.setItem(LOCAL_KEY,JSON.stringify({cells,bookmarks,groups,settings}));
+    localStorage.setItem(LOCAL_INIT_KEY,'1');
+    setSyncStatus('Saved (this browser) ✓','ok');setTimeout(()=>setSyncStatus('',''),2000);
+  }catch(e){setSyncStatus('Save failed','err');console.error(e);}
+}
+function loadFromLocal(){
+  try{
+    const raw=localStorage.getItem(LOCAL_KEY);
+    if(raw){
+      const data=JSON.parse(raw);
+      if(data.settings)Object.assign(settings,data.settings);
+      if(data.cells){cells=data.cells||{};bookmarks=data.bookmarks||[];groups=data.groups||[];}
+      collapsedGroups=new Set(settings.collapsedGroups||[]);
+    }
+  }catch(e){console.error(e);}
+}
+function hasLocalData(){
+  try{
+    const raw=localStorage.getItem(LOCAL_KEY);
+    if(!raw)return false;
+    const data=JSON.parse(raw);
+    return data.bookmarks&&data.bookmarks.length>0;
+  }catch(e){return false;}
+}
+function resetState(){
+  cells={};bookmarks=[];groups=[];collapsedGroups=new Set();
+  settings={
+    font:'Montserrat',titleSize:26,titleColor:'#ffffff',tileTextColor:'#cccccc',
+    bgColor:'#000000',pageTitle:'My Bookmarks',cols:8,tileSize:'sm',
+    hgap:28,vgap:0,tileBgColor:'#1a1a1a',tileBgTransparent:false,
+    groupTitleColor:'#888888',gapTitleToContent:0,gapBetweenGroups:50,gapGroupTitleToRow:30,
+    showGroups:true,vDividerColor:'rgba(255,255,255,0.3)',vDividerWidth:2,
+    groupLineColor:'rgba(255,255,255,0.12)',groupLineWidth:1,
+    collapsedGroups:[]
+  };
+}
+
+// GENERIC SAVE/SCHEDULE — dispatches to local or firebase based on mode
+async function saveData(){
+  if(storageMode==='firebase')await saveToFirestore();
+  else saveToLocal();
+}
+function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveData,800);}
+
+// IMPORT CONSENT DIALOG
+function askImportConsent(){
+  return new Promise(resolve=>{
+    importConsentResolver=resolve;
+    document.getElementById('importConsentOverlay').style.display='flex';
+  });
+}
+window.resolveImportConsent=function(yes){
+  document.getElementById('importConsentOverlay').style.display='none';
+  if(importConsentResolver){importConsentResolver(yes);importConsentResolver=null;}
+};
+
+// ACCOUNT UI
+function updateAccountUI(){
+  const row=document.getElementById('accountStatusRow');
+  const btn=document.getElementById('accountBtn');
+  if(storageMode==='firebase'&&currentUser){
+    row.textContent='Signed in as '+currentUser.email+' — synced to your account';
+    btn.textContent='✕ Sign Out';
+    btn.style.borderColor='#3a1a1a';btn.style.background='#1f0d0d';btn.style.color='#f44336';
+  } else {
+    row.textContent='Not signed in — bookmarks saved in this browser only';
+    btn.textContent='Sign in with Google';
+    btn.style.borderColor='#1a2a4a';btn.style.background='#0d1220';btn.style.color='#64b5f6';
+  }
+}
+window.handleAccountBtn=function(){
+  if(storageMode==='firebase')doLogout();
+  else signInWithGoogle();
+};
+
 // AUTH
-window.signInWithGoogle=async function(){try{document.getElementById('authErr').textContent='';await signInWithPopup(auth,provider);}catch(e){document.getElementById('authErr').textContent='Sign in failed.';}};
-window.doLogout=async function(){if(!confirm('Sign out?'))return;await signOut(auth);};
+window.signInWithGoogle=async function(){
+  try{
+    const errEl=document.getElementById('authErr');
+    if(errEl)errEl.textContent='';
+    await signInWithPopup(auth,provider);
+  }catch(e){
+    const errEl=document.getElementById('authErr');
+    if(errEl)errEl.textContent='Sign in failed.';
+    console.error(e);
+  }
+};
+
+window.doLogout=async function(){
+  if(!confirm('Sign out? Your bookmarks will switch to this browser\'s local copy.'))return;
+  await signOut(auth);
+};
+
+window.continueWithoutAccount=function(){
+  localStorage.setItem(LOCAL_INIT_KEY,'1');
+  document.getElementById('authScreen').style.display='none';
+  document.getElementById('mainPage').style.display='flex';
+  storageMode='local';
+  loadFromLocal();
+  applyAllSettings();render();updateAccountUI();
+};
 
 onAuthStateChanged(auth,async user=>{
   if(user){
     currentUser=user;
+    storageMode='firebase';
     document.getElementById('authScreen').style.display='none';
     document.getElementById('mainPage').style.display='flex';
     await loadFromFirestore();
+    updateAccountUI();
   } else {
     currentUser=null;
-    document.getElementById('authScreen').style.display='flex';
-    document.getElementById('mainPage').style.display='none';
+    // No firebase user — fall back to local mode
+    storageMode='local';
+    resetState();
+    loadFromLocal();
+    const initialized=localStorage.getItem(LOCAL_INIT_KEY)==='1';
+    if(initialized){
+      document.getElementById('authScreen').style.display='none';
+      document.getElementById('mainPage').style.display='flex';
+      applyAllSettings();render();updateAccountUI();
+    } else {
+      // first ever visit — show welcome screen
+      document.getElementById('authScreen').style.display='flex';
+      document.getElementById('mainPage').style.display='none';
+    }
   }
 });
 
@@ -381,13 +519,35 @@ async function loadFromFirestore(){
   try{
     const ref=doc(db,'users',currentUser.uid);
     const snap=await getDoc(ref);
-    if(snap.exists()){
+    const docExists=snap.exists();
+    let firestoreHasData=false;
+    if(docExists){
+      const data=snap.data();
+      firestoreHasData=!!(data.bookmarks&&data.bookmarks.length>0);
+    }
+
+    // If this firebase account has no data yet, but this browser has local data,
+    // ask the user if they want to import it
+    if(!firestoreHasData&&hasLocalData()){
+      const wantsImport=await askImportConsent();
+      if(wantsImport){
+        loadFromLocal(); // load local data into memory
+        deduplicateCells();
+        await saveToFirestore(); // push it to firebase
+        applyAllSettings();render();
+        setSyncStatus('Imported ✓','ok');setTimeout(()=>setSyncStatus('',''),2000);
+        return;
+      } else {
+        resetState(); // fresh blank sheet
+      }
+    } else if(docExists){
       const data=snap.data();
       if(data.settings)Object.assign(settings,data.settings);
       if(data.cells){cells=data.cells||{};bookmarks=data.bookmarks||[];groups=data.groups||[];}
       else if(data.bookmarks&&data.bookmarks.length)migrateOldBookmarks(data.bookmarks);
       collapsedGroups=new Set(settings.collapsedGroups||[]);
     }
+
     // silent deduplicate
     const hadDupes=deduplicateCells();
     await setDoc(ref,{email:currentUser.email},{merge:true});
@@ -408,7 +568,6 @@ async function saveToFirestore(){
     setSyncStatus('Saved ✓','ok');setTimeout(()=>setSyncStatus('',''),2000);
   }catch(e){setSyncStatus('Save failed','err');console.error(e);}
 }
-function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveToFirestore,800);}
 
 function migrateOldBookmarks(oldBMs){
   cells={};bookmarks=[];groups=[];
@@ -509,7 +668,7 @@ window.toggleEdit=function(){
     gearBtn.disabled=false;
     hint.textContent='';
     titleEl.setAttribute('readonly','');titleEl.className='';
-    saveToFirestore();
+    saveData();
   }
   render();
 };
@@ -521,13 +680,13 @@ window.toggleSettings=function(){
   if(isOpen){
     panel.className='edit-panel';
     btn.style.background='none';
-    saveToFirestore();
+    saveData();
   } else {
     if(editMode)return;
     panel.className='edit-panel visible';
     btn.style.background='rgba(255,170,0,0.18)';
     btn.style.borderRadius='8px';
-    buildFontPicker();updateShowGroupsBtn();
+    buildFontPicker();updateShowGroupsBtn();updateAccountUI();
   }
   render();
 };
@@ -550,7 +709,7 @@ window.removeDividerCell=async function(row,col){
   const key=row+','+col;
   delete cells[key];
   render();
-  await saveToFirestore();
+  await saveData();
 };
 
 // RENDER
@@ -777,7 +936,7 @@ window.onDropTile=async function(e,toRow,toCol){
   if(!fromKey||fromKey===toKey){dropHandled=false;return;}
   if(toBmId&&toBmId!=='divider')cells[fromKey]=toBmId;else delete cells[fromKey];
   cells[toKey]=bmId;dragBMId=null;
-  render();await saveToFirestore();
+  render();await saveData();
 };
 window.onDropPlaceholder=async function(e,toRow,toCol){
   e.preventDefault();e.stopPropagation();
@@ -788,7 +947,7 @@ window.onDropPlaceholder=async function(e,toRow,toCol){
   let fromKey=null;Object.keys(cells).forEach(k=>{if(cells[k]===bmId)fromKey=k;});
   if(!fromKey||fromKey===toKey){dropHandled=false;return;}
   delete cells[fromKey];cells[toKey]=bmId;dragBMId=null;
-  render();await saveToFirestore();
+  render();await saveData();
 };
 
 // MODALS
@@ -838,7 +997,7 @@ window.deleteBM=async function(bmId,row,col){
   delete cells[key];
   const stillUsed=Object.values(cells).some(id=>id===bmId);
   if(!stillUsed)bookmarks=bookmarks.filter(b=>b.id!==bmId);
-  render();await saveToFirestore();
+  render();await saveData();
 };
 window.openLink=function(enc){const url=decodeURIComponent(enc);const a=document.createElement('a');a.href=url.match(/^https?:\/\//)?url:'https://'+url;a.target='_self';document.body.appendChild(a);a.click();document.body.removeChild(a);};
 
@@ -863,7 +1022,7 @@ window.importBM=function(e){
       deduplicateCells();
       collapsedGroups=new Set(settings.collapsedGroups||[]);
       applyAllSettings();if(editMode)buildFontPicker();
-      render();await saveToFirestore();
+      render();await saveData();
       showToast('Imported!','#64b5f6');
     }catch(err){showToast('Could not read file.','#f44336');console.error(err);}
     e.target.value='';
@@ -871,7 +1030,7 @@ window.importBM=function(e){
   reader.readAsText(file);
 };
 
-try{history.replaceState(null,'','/');}catch(e){}
+try{if(window.self===window.top)history.replaceState(null,'','/');}catch(e){}
 </script>
 </body>
 </html>
